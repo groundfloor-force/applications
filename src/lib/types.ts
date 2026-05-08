@@ -1,0 +1,175 @@
+export interface Property {
+  id: string
+  name: string
+  address: string
+  unit: string
+  city: string
+  postal: string
+  rent: number
+  bedrooms: string
+  bathrooms: string
+  pictureUrl: string
+  available: string
+  laundry: string
+  parking: string
+  pets: string
+  balcony: string
+  floor: string
+  status: string
+}
+
+export interface Occupant {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  birthDate: string
+  relationship: string
+  occupation: string
+  employerName: string
+  employerAddress: string
+  employerAddressLine2: string
+  employerCity: string
+  employerProvince: string
+  employerPostal: string
+  employerPhone: string
+  employmentFrom: string
+  employmentTo: string
+  monthlyGrossSalary: string
+  positionHeld: string
+}
+
+export interface FormData {
+  // Step 1
+  property: Property | null
+
+  // Step 2 – Primary Applicant
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  birthDate: string
+  currentAddress: string
+  currentAddressLine2: string
+  currentCity: string
+  currentProvince: string
+  currentPostal: string
+  children: string
+  pets: string
+
+  // Step 3 – Household Details
+  leasingAgent: string
+  securityDeposit: string
+  monthlyRent: string
+  numOccupants: number
+  numVehicles: string
+  moveInDate: string
+  viewedUnit: string
+
+  // Step 4 – Additional Occupants
+  occupants: Occupant[]
+
+  // Step 5 – Rental History
+  prevLandlordFirstName: string
+  prevLandlordLastName: string
+  prevMonthlyRent: string
+  rentedFrom: string
+  rentedTo: string
+  reasonForLeaving: string
+  prevLandlordPhone: string
+  prevLandlordEmail: string
+
+  // Step 6 – Employment
+  employerName: string
+  payStubFile: File | null
+
+  // Step 7 – References + Cosigner
+  ref1FirstName: string
+  ref1LastName: string
+  ref1Phone: string
+  ref1Email: string
+  cosignerFirstName: string
+  cosignerLastName: string
+  cosignerRelationship: string
+  cosignerEmail: string
+  cosignerPhone: string
+
+  // Step 8
+  additionalDetails: string
+  termsAgreed: boolean
+}
+
+export interface FormConfig {
+  formOpen: boolean
+  companyName: string
+  logoUrl: string
+  termsText: string
+  notificationEmail: string
+  closedMessage: string
+}
+
+export const emptyOccupant = (): Occupant => ({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  birthDate: '',
+  relationship: '',
+  occupation: '',
+  employerName: '',
+  employerAddress: '',
+  employerAddressLine2: '',
+  employerCity: '',
+  employerProvince: '',
+  employerPostal: '',
+  employerPhone: '',
+  employmentFrom: '',
+  employmentTo: '',
+  monthlyGrossSalary: '',
+  positionHeld: '',
+})
+
+export const initialFormData: FormData = {
+  property: null,
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  birthDate: '',
+  currentAddress: '',
+  currentAddressLine2: '',
+  currentCity: '',
+  currentProvince: '',
+  currentPostal: '',
+  children: '',
+  pets: '',
+  leasingAgent: '',
+  securityDeposit: '',
+  monthlyRent: '',
+  numOccupants: 1,
+  numVehicles: '',
+  moveInDate: '',
+  viewedUnit: '',
+  occupants: [],
+  prevLandlordFirstName: '',
+  prevLandlordLastName: '',
+  prevMonthlyRent: '',
+  rentedFrom: '',
+  rentedTo: '',
+  reasonForLeaving: '',
+  prevLandlordPhone: '',
+  prevLandlordEmail: '',
+  employerName: '',
+  payStubFile: null,
+  ref1FirstName: '',
+  ref1LastName: '',
+  ref1Phone: '',
+  ref1Email: '',
+  cosignerFirstName: '',
+  cosignerLastName: '',
+  cosignerRelationship: '',
+  cosignerEmail: '',
+  cosignerPhone: '',
+  additionalDetails: '',
+  termsAgreed: false,
+}
