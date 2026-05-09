@@ -348,7 +348,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div>
       <IdleWarning onClear={handleIdleClear} />
 
       {/* Resume saved application banner */}
@@ -371,108 +371,143 @@ export default function ApplicationForm({ config, autofill }: Props) {
         </div>
       )}
 
-      {/* Progress bar only shows after property selection (step 2+), numbered 1–7 */}
-      {step > 1 && <ProgressBar current={step - 1} total={TOTAL_STEPS - 1} />}
+      {/* ── Steps 0–1: full-width screens (documents / property search) ── */}
+      {step <= 1 && (
+        <div className="min-h-[400px]">
+          {step === 0 && <StepDocuments onBegin={() => setStep(1)} />}
+          {step === 1 && <Step1Property {...stepProps} onNext={handleNext} />}
+        </div>
+      )}
 
-      {/* Property summary banner — shown on steps 2–8 when a property is selected */}
-      {step > 1 && data.property && (
-        <div className="mb-8 border border-brand-border bg-white overflow-hidden animate-fade-in">
-          <div className="flex">
-            {/* Photo */}
-            <div className="w-32 sm:w-44 flex-shrink-0 bg-brand-bg relative overflow-hidden">
-              {data.property.pictureUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={data.property.pictureUrl}
-                  alt={data.property.address}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                    e.currentTarget.parentElement!.classList.add('property-placeholder-bg')
-                  }}
-                />
-              ) : null}
-              {/* Default placeholder — shown when no image */}
-              {!data.property.pictureUrl && (
-                <div className="w-full h-full flex flex-col items-center justify-center p-3" style={{ background: 'linear-gradient(135deg, #e6f0f9 0%, #f1f4f8 100%)' }}>
-                  <svg className="w-10 h-10 text-primary-300 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                    <polyline strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} points="9 22 9 12 15 12 15 22" />
-                  </svg>
-                  <span className="text-xs text-primary-300 text-center" style={{ fontWeight: 600 }}>Photo coming soon</span>
+      {/* ── Steps 2–8: form layout with progress bar + optional property sidebar ── */}
+      {step > 1 && (
+        <>
+          <ProgressBar current={step - 1} total={TOTAL_STEPS - 1} />
+
+          <div className="lg:flex lg:gap-8 lg:items-start">
+            {/* Property sidebar — desktop only, sticks while scrolling */}
+            {data.property && (
+              <div className="hidden lg:block lg:w-64 flex-shrink-0 lg:sticky lg:top-24">
+                <div className="border border-brand-border bg-white overflow-hidden">
+                  {/* Photo */}
+                  <div className="h-36 bg-brand-bg relative overflow-hidden">
+                    {data.property.pictureUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={data.property.pictureUrl}
+                        alt={data.property.address}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center" style={{ background: 'linear-gradient(135deg, #e6f0f9 0%, #f1f4f8 100%)' }}>
+                        <svg className="w-10 h-10 text-primary-300 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                          <polyline strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} points="9 22 9 12 15 12 15 22" />
+                        </svg>
+                        <span className="text-xs text-primary-300" style={{ fontWeight: 600 }}>Photo coming soon</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Details */}
+                  <div className="p-4">
+                    <p className="text-xs text-primary-500 uppercase tracking-widest mb-1" style={{ fontWeight: 600 }}>Applying for</p>
+                    <p className="text-brand-dark text-sm leading-snug mb-2" style={{ fontWeight: 600 }}>
+                      {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''}
+                    </p>
+                    <p className="text-xs text-brand-gray mb-3">{data.property.city}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {data.property.rent > 0 && (
+                        <span className="text-xs bg-primary-500 text-white px-2 py-0.5" style={{ fontWeight: 600 }}>
+                          ${data.property.rent.toLocaleString()}/mo
+                        </span>
+                      )}
+                      {data.property.bedrooms && (
+                        <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bedrooms}</span>
+                      )}
+                      {data.property.bathrooms && (
+                        <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bathrooms}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Details */}
-            <div className="flex-1 p-4 sm:p-5 min-w-0 flex flex-col justify-center">
-              <p className="text-xs text-primary-500 uppercase tracking-widest mb-1" style={{ fontWeight: 600 }}>
-                Applying for
-              </p>
-              <p className="text-brand-dark text-base leading-snug mb-2" style={{ fontWeight: 600 }}>
-                {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''}
-                <span className="text-brand-gray"> — {data.property.city}</span>
-              </p>
-              <div className="flex flex-wrap gap-x-1 gap-y-1">
-                {data.property.rent > 0 && (
-                  <span className="text-xs bg-primary-500 text-white px-2 py-0.5" style={{ fontWeight: 600 }}>
-                    ${data.property.rent.toLocaleString()}/mo
-                  </span>
+            {/* Mobile property banner */}
+            {data.property && (
+              <div className="lg:hidden mb-6 border border-brand-border bg-white overflow-hidden">
+                <div className="flex">
+                  <div className="w-28 flex-shrink-0 bg-brand-bg relative overflow-hidden">
+                    {data.property.pictureUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={data.property.pictureUrl} alt={data.property.address}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e6f0f9 0%, #f1f4f8 100%)' }}>
+                        <svg className="w-8 h-8 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 p-3 min-w-0">
+                    <p className="text-xs text-primary-500 uppercase tracking-widest mb-0.5" style={{ fontWeight: 600 }}>Applying for</p>
+                    <p className="text-brand-dark text-sm leading-snug" style={{ fontWeight: 600 }}>
+                      {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''} — {data.property.city}
+                    </p>
+                    {data.property.rent > 0 && (
+                      <p className="text-xs text-primary-500 mt-1" style={{ fontWeight: 600 }}>${data.property.rent.toLocaleString()}/mo</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form content */}
+            <div className="flex-1 min-w-0">
+              <div className="min-h-[400px]">
+                {step === 2 && <Step2Applicant {...stepProps} />}
+                {step === 3 && <Step3Details {...stepProps} />}
+                {step === 4 && <Step4Occupants {...stepProps} />}
+                {step === 5 && <Step5RentalHistory {...stepProps} />}
+                {step === 6 && <Step6Employment {...stepProps} />}
+                {step === 7 && <Step7References {...stepProps} />}
+                {step === 8 && (
+                  <Step8Terms
+                    {...stepProps}
+                    config={config}
+                    submitting={submitting}
+                    onSubmit={handleSubmit}
+                  />
                 )}
-                {data.property.bedrooms && (
-                  <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bedrooms}</span>
-                )}
-                {data.property.bathrooms && (
-                  <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bathrooms}</span>
-                )}
-                {data.property.available && (
-                  <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">Avail: {data.property.available}</span>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex justify-between items-center mt-10 pt-6 border-t border-brand-border">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={step <= 1}
+                  className="btn-secondary disabled:opacity-30"
+                >
+                  Back
+                </button>
+
+                {step < TOTAL_STEPS && (
+                  <button type="button" onClick={handleNext} className="btn-primary">
+                    Continue
+                    <svg className="w-4 h-4 ml-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
-
-      <div className="min-h-[400px]">
-        {step === 0 && <StepDocuments onBegin={() => setStep(1)} />}
-        {step === 1 && <Step1Property {...stepProps} onNext={handleNext} />}
-        {step === 2 && <Step2Applicant {...stepProps} />}
-        {step === 3 && <Step3Details {...stepProps} />}
-        {step === 4 && <Step4Occupants {...stepProps} />}
-        {step === 5 && <Step5RentalHistory {...stepProps} />}
-        {step === 6 && <Step6Employment {...stepProps} />}
-        {step === 7 && <Step7References {...stepProps} />}
-        {step === 8 && (
-          <Step8Terms
-            {...stepProps}
-            config={config}
-            submitting={submitting}
-            onSubmit={handleSubmit}
-          />
-        )}
-      </div>
-
-      {/* Navigation — hidden on pre-form screens (step 0 = documents, step 1 = property search) */}
-      {step > 1 && <div className="flex justify-between items-center mt-10 pt-6 border-t border-brand-border">
-        <button
-          type="button"
-          onClick={handleBack}
-          disabled={step <= 1}
-          className="btn-secondary disabled:opacity-30"
-        >
-          Back
-        </button>
-
-        {step < TOTAL_STEPS && (
-          <button type="button" onClick={handleNext} className="btn-primary">
-            Continue
-            <svg className="w-4 h-4 ml-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-      </div>}
     </div>
   )
 }

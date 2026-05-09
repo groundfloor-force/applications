@@ -42,17 +42,6 @@ export default async function ApplyPage({
           </div>
         ) : (
           <>
-            <div className="text-center mb-10 animate-fade-up">
-              <h1 className="text-4xl text-brand-dark mb-3">
-                Rental Application
-              </h1>
-              <p className="text-brand-gray max-w-xl mx-auto">
-                Complete all sections below. Your information will be securely submitted to our
-                leasing team for review. All fields marked with{' '}
-                <span className="text-secondary font-semibold">*</span> are required.
-              </p>
-            </div>
-
             <ApplicationForm config={config} autofill={autofill} />
           </>
         )}
