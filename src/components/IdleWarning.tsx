@@ -85,7 +85,7 @@ export default function IdleWarning({ onClear, warnAfterMin = 20, clearAfterMin 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center">
+      <div className="bg-white  shadow-2xl max-w-sm w-full p-8 text-center">
         <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -93,10 +93,10 @@ export default function IdleWarning({ onClear, warnAfterMin = 20, clearAfterMin 
           </svg>
         </div>
 
-        <h2 className="text-xl text-gray-900 mb-2" style={{ fontWeight: 700 }}>
+        <h2 className="text-xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
           Still there?
         </h2>
-        <p className="text-sm text-gray-500 mb-2">
+        <p className="text-sm text-brand-gray mb-2">
           Your session has been idle for a while. For your security, this form will be cleared in:
         </p>
 
@@ -115,8 +115,7 @@ export default function IdleWarning({ onClear, warnAfterMin = 20, clearAfterMin 
           <button
             type="button"
             onClick={handleRestart}
-            className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            style={{ fontWeight: 400 }}
+            className="w-full py-2 text-sm text-brand-gray hover:text-brand-gray transition-colors"
           >
             Clear form and start over
           </button>

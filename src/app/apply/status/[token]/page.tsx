@@ -51,7 +51,7 @@ export default async function StatusPage({
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 shadow-sm">
+      <header className="bg-white border-b border-gray-100 ">
         <div className="max-w-5xl mx-auto px-4 py-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={config.logoUrl} alt={config.companyName} className="h-10 object-contain" />
@@ -83,7 +83,7 @@ export default async function StatusPage({
               </div>
 
               {/* Status badge */}
-              <div className={`rounded-2xl p-6 mb-6 text-center ${style!.bg}`}>
+              <div className={` p-6 mb-6 text-center ${style!.bg}`}>
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${style!.dot} animate-pulse`} />
                   <span className={`text-xl font-bold ${style!.text}`}>{style!.label}</span>
@@ -94,7 +94,7 @@ export default async function StatusPage({
               </div>
 
               {/* Application details */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
+              <div className="bg-white  border border-gray-100  p-5 mb-6">
                 <h2 className="text-sm uppercase tracking-wide text-gray-400 mb-4" style={{ fontWeight: 600 }}>
                   Your Application
                 </h2>

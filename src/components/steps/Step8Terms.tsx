@@ -14,8 +14,8 @@ interface Props {
 
 function ReviewCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-gray-50 rounded-xl border border-gray-100 p-4">
-      <p className="text-xs uppercase tracking-wide text-gray-400 mb-3" style={{ fontWeight: 600 }}>{title}</p>
+    <div className="bg-brand-bg  border border-brand-border p-4">
+      <p className="text-xs uppercase tracking-widest text-primary-500 mb-3" style={{ fontWeight: 600 }}>{title}</p>
       <div className="space-y-1.5">{children}</div>
     </div>
   )
@@ -25,8 +25,8 @@ function Row({ label, value }: { label: string; value?: string | number | null }
   if (!value && value !== 0) return null
   return (
     <div className="flex justify-between gap-4 text-sm">
-      <span className="text-gray-500 flex-shrink-0" style={{ fontWeight: 400 }}>{label}</span>
-      <span className="text-gray-800 text-right" style={{ fontWeight: 500 }}>{value}</span>
+      <span className="text-brand-gray flex-shrink-0">{label}</span>
+      <span className="text-brand text-right" style={{ fontWeight: 700 }}>{value}</span>
     </div>
   )
 }
@@ -36,10 +36,10 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
 
   return (
     <div>
-      <h2 className="text-2xl text-primary-500 mb-1" style={{ fontWeight: 700 }}>
+      <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
         Review & Submit
       </h2>
-      <p className="text-sm text-gray-500 mb-6" style={{ fontWeight: 300 }}>
+      <p className="text-sm text-brand-gray mb-6">
         Review your application before submitting. Please read the terms carefully.
       </p>
 
@@ -129,18 +129,18 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
       {/* Terms */}
       <div className="form-section">
         <h3 className="section-title">Terms & Conditions</h3>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-64 overflow-y-auto text-sm text-gray-700 leading-relaxed whitespace-pre-wrap mb-4" style={{ fontWeight: 300 }}>
+        <div className="bg-brand-bg border border-brand-border  p-4 max-h-64 overflow-y-auto text-sm text-brand leading-relaxed whitespace-pre-wrap mb-4 terms-scroll">
           {config.termsText}
         </div>
 
         <label className="flex items-start gap-3 cursor-pointer group">
           <input
             type="checkbox"
-            className="mt-1 w-4 h-4 text-primary-500 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0"
+            className="mt-1 w-4 h-4 text-primary-500 border-brand-border rounded focus:ring-primary-500 flex-shrink-0"
             checked={data.termsAgreed}
             onChange={(e) => onChange({ termsAgreed: e.target.checked })}
           />
-          <span className="text-sm text-gray-700 group-hover:text-gray-900" style={{ fontWeight: 400 }}>
+          <span className="text-sm text-brand group-hover:text-brand-dark">
             I have read and agree to the terms and conditions above. I declare that all information
             provided in this application is true and correct.
             <span className="required">*</span>
@@ -178,7 +178,7 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
       </div>
 
       {errors.submit && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-secondary text-sm text-center">
+        <div className="mt-4 p-4 bg-red-50 border border-red-200  text-secondary text-sm text-center">
           {errors.submit}
         </div>
       )}

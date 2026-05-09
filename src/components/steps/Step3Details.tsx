@@ -38,10 +38,10 @@ export default function Step3Details({ data, onChange, errors }: Props) {
 
   return (
     <div>
-      <h2 className="font-heading text-2xl font-semibold text-primary-500 mb-1">
+      <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
         Property & Household Details
       </h2>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-brand-gray mb-6">
         Tell us more about the application specifics for{' '}
         <strong>
           {property ? `${property.address}${property.unit ? ` Unit ${property.unit}` : ''}` : 'the selected property'}
@@ -102,7 +102,7 @@ export default function Step3Details({ data, onChange, errors }: Props) {
         </div>
 
         {data.numOccupants > 1 && (
-          <div className="mt-4 p-4 bg-primary-50 rounded-lg border border-primary-100 text-sm text-primary-700">
+          <div className="mt-4 p-4 bg-primary-50  border border-primary-200 text-sm text-primary-700">
             You have indicated <strong>{data.numOccupants} adults</strong>. In the next step, you
             will be asked to provide details for{' '}
             <strong>{data.numOccupants - 1} additional occupant{data.numOccupants - 1 > 1 ? 's' : ''}</strong>.

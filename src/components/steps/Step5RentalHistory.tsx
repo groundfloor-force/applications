@@ -34,15 +34,15 @@ export default function Step5RentalHistory({ data, onChange, errors, onFieldBlur
 
   return (
     <div>
-      <h2 className="font-heading text-2xl font-semibold text-primary-500 mb-1">
+      <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
         Rental History
       </h2>
-      <p className="text-sm text-gray-500 mb-2">
+      <p className="text-sm text-brand-gray mb-2">
         Providing your current landlord&apos;s information is paramount to processing this application.
         Accurate phone numbers and/or email address are required in order to process your application
         in a timely manner.
       </p>
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 mb-6">
+      <div className="bg-amber-50 border border-amber-200  p-3 text-sm text-amber-800 mb-6">
         If this is your first rental, enter your parents&apos; or guardian&apos;s information and note
         &ldquo;First Rental&rdquo; in the Reason for Leaving field.
       </div>

@@ -41,10 +41,10 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
 
   return (
     <div>
-      <h2 className="text-2xl text-primary-500 mb-1" style={{ fontWeight: 700 }}>
+      <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
         Primary Applicant Information
       </h2>
-      <p className="text-sm text-gray-500 mb-6" style={{ fontWeight: 300 }}>
+      <p className="text-sm text-brand-gray mb-6">
         Please provide your details exactly as they appear on your government-issued ID.
         If there are multiple applicants, you will enter their information in a later step.
       </p>

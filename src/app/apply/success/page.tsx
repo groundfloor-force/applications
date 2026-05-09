@@ -12,40 +12,40 @@ export default async function SuccessPage({
   const { token } = await searchParams
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3">
+    <div className="min-h-screen bg-brand-bg flex flex-col">
+      <header className="bg-white border-b border-brand-border">
+        <div className="max-w-5xl mx-auto px-4 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={config.logoUrl} alt={config.companyName} className="h-10 object-contain" />
+          <img src={config.logoUrl} alt={config.companyName} className="h-12 object-contain" />
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-16">
-        <div className="max-w-lg w-full text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="max-w-lg w-full text-center animate-fade-up">
+          <div className="w-20 h-20 bg-green-100 flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
 
-          <h1 className="text-3xl text-gray-900 mb-3" style={{ fontWeight: 700 }}>
+          <h1 className="text-3xl text-brand-dark mb-3">
             Application Submitted!
           </h1>
-          <p className="text-gray-600 mb-2" style={{ fontWeight: 400 }}>
+          <p className="text-brand-dark mb-2">
             Thank you for applying with{' '}
             <strong className="text-primary-500">{config.companyName}</strong>.
           </p>
-          <p className="text-gray-500 text-sm mb-8" style={{ fontWeight: 300 }}>
+          <p className="text-brand-gray text-sm mb-8">
             Your application has been received and sent to our leasing team. We will be in touch
             shortly.
           </p>
 
           {token && (
-            <div className="bg-primary-50 border border-primary-200 rounded-xl p-5 mb-6">
+            <div className="bg-primary-50 border border-primary-200 p-5 mb-6">
               <p className="text-sm text-primary-700 mb-3" style={{ fontWeight: 600 }}>
                 Track your application status
               </p>
-              <p className="text-xs text-primary-600 mb-4" style={{ fontWeight: 300 }}>
+              <p className="text-xs text-primary-500 mb-4">
                 Bookmark this link to check your application status at any time.
               </p>
               <Link
@@ -61,10 +61,10 @@ export default async function SuccessPage({
             </div>
           )}
 
-          <div className="bg-white border border-gray-100 rounded-xl p-5 text-sm text-gray-600 mb-8 text-left">
+          <div className="bg-white border border-brand-border p-5 text-sm text-brand-dark mb-8 text-left">
             <p className="mb-2" style={{ fontWeight: 600 }}>What happens next?</p>
-            <ol className="space-y-1.5 list-decimal list-inside" style={{ fontWeight: 300 }}>
-              <li>Our team reviews your application (typically within 1–2 business days)</li>
+            <ol className="space-y-1.5 list-decimal list-inside text-brand-gray">
+              <li>Our team reviews your application (typically within 1-2 business days)</li>
               <li>We contact your previous landlord and references</li>
               <li>You will be notified of the decision by email or phone</li>
               <li>If approved, you will receive your lease agreement to review and sign</li>
@@ -74,9 +74,8 @@ export default async function SuccessPage({
           <Link
             href="https://www.groundfloorpm.com"
             className="text-primary-500 hover:underline text-sm"
-            style={{ fontWeight: 400 }}
           >
-            Return to Ground Floor Property Management →
+            Return to Ground Floor Property Management
           </Link>
         </div>
       </main>

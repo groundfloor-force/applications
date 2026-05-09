@@ -35,9 +35,9 @@ function OccupantForm({
   const errKey = (k: string) => errors[`occ${index}_${k}`]
 
   return (
-    <div className="form-section border-l-4 border-primary-500">
+    <div className="form-section">
       <h3 className="section-title">Occupant {index + 2} Information</h3>
-      <p className="text-xs text-gray-400 mb-4">Required for all occupants 18 years and older</p>
+      <p className="text-xs text-brand-gray mb-4">Required for all occupants 18 years and older</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <FormField label="First Name" required error={errKey('firstName')}>
@@ -66,9 +66,9 @@ function OccupantForm({
         </FormField>
       </div>
 
-      <h4 className="font-bold text-sm text-gray-700 mb-3">
+      <h4 className="font-bold text-sm text-brand-dark mb-3">
         Employment Information
-        <span className="font-normal text-gray-400 ml-2">(if unemployed or retired, use your current address)</span>
+        <span className="font-normal text-brand-gray ml-2">(if unemployed or retired, use your current address)</span>
       </h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
@@ -126,16 +126,16 @@ export default function Step4Occupants({ data, onChange, errors }: Props) {
   if (data.numOccupants <= 1) {
     return (
       <div className="text-center py-12">
-        <div className="text-gray-300 mb-4">
+        <div className="text-brand-border mb-4">
           <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
-        <p className="text-gray-500">
+        <p className="text-brand-gray">
           You indicated only 1 adult. No additional occupant information is needed.
         </p>
-        <p className="text-sm text-gray-400 mt-2">
-          Click <strong>Next</strong> to continue.
+        <p className="text-sm text-brand-gray mt-2">
+          Click <strong>Continue</strong> to proceed.
         </p>
       </div>
     )
@@ -143,10 +143,10 @@ export default function Step4Occupants({ data, onChange, errors }: Props) {
 
   return (
     <div>
-      <h2 className="font-heading text-2xl font-semibold text-primary-500 mb-1">
+      <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
         Additional Occupants
       </h2>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-brand-gray mb-6">
         Required for all occupants 18 years of age or older. Please complete a section for each
         additional adult who will be living in the unit.
       </p>

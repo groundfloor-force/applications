@@ -5,7 +5,7 @@ import { Property } from '@/lib/types'
 function Badge({ text }: { text: string }) {
   if (!text) return null
   return (
-    <span className="inline-block bg-primary-50 text-primary-700 text-xs font-medium px-2 py-0.5 rounded-full">
+    <span className="inline-block bg-primary-50 text-primary-700 text-xs px-2 py-0.5 rounded-full" style={{ fontWeight: 700 }}>
       {text}
     </span>
   )
@@ -28,14 +28,14 @@ export default function PropertyCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-xl border-2 overflow-hidden transition-all duration-200 hover:shadow-md focus:outline-none ${
+      className={`w-full text-left  border-2 overflow-hidden transition-all duration-200 hover: focus:outline-none ${
         selected
-          ? 'border-primary-500 shadow-md ring-2 ring-primary-200'
-          : 'border-gray-200 hover:border-primary-300'
+          ? 'border-primary-500  ring-2 ring-primary-200'
+          : 'border-brand-border hover:border-primary-300'
       }`}
     >
       {/* Photo */}
-      <div className="relative h-48 bg-gray-100">
+      <div className="relative h-48 bg-brand-bg">
         {property.pictureUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -49,7 +49,7 @@ export default function PropertyCard({
             }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <div className="w-full h-full flex items-center justify-center text-brand-gray">
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
               <polyline strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} points="9 22 9 12 15 12 15 22" />
@@ -67,15 +67,15 @@ export default function PropertyCard({
 
       {/* Info */}
       <div className="p-4">
-        <h3 className="font-heading font-semibold text-gray-900 text-base leading-snug mb-1">
+        <h3 className="text-brand text-base leading-snug mb-1" style={{ fontWeight: 600 }}>
           {displayAddress}
         </h3>
-        <p className="text-sm text-gray-500 mb-3">{property.city}</p>
+        <p className="text-sm text-brand-gray mb-3">{property.city}</p>
 
         <div className="flex items-center gap-3 mb-3">
-          <span className="text-2xl font-bold text-primary-500">
+          <span className="text-2xl text-primary-500" style={{ fontWeight: 700 }}>
             ${property.rent.toLocaleString()}
-            <span className="text-sm font-normal text-gray-500">/mo</span>
+            <span className="text-sm text-brand-gray ml-1" style={{ fontWeight: 400 }}>/mo</span>
           </span>
         </div>
 

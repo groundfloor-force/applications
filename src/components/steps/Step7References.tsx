@@ -23,10 +23,10 @@ export default function Step7References({ data, onChange, errors, onFieldBlur }:
 
   return (
     <div>
-      <h2 className="font-heading text-2xl font-semibold text-primary-500 mb-1">
+      <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
         References & Co-signer
       </h2>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-brand-gray mb-6">
         Please provide at least one personal or professional reference, and a co-signer if you have
         been asked to provide one.
       </p>
@@ -75,7 +75,7 @@ export default function Step7References({ data, onChange, errors, onFieldBlur }:
           </FormField>
         </div>
         {hasCosigner && (
-          <p className="mt-3 text-xs text-gray-400">
+          <p className="mt-3 text-xs text-brand-gray">
             Co-signer information has been entered and will be included with your application.
           </p>
         )}
