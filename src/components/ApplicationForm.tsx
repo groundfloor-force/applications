@@ -78,7 +78,7 @@ interface Props {
   autofill?: boolean
 }
 
-const TEST_DATA: Omit<FormData, 'payStubFile'> = {
+const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
   property: {
     id: '474955392',
     name: '45 Fairview Knoll #3',
@@ -205,7 +205,7 @@ const TEST_DATA: Omit<FormData, 'payStubFile'> = {
 export default function ApplicationForm({ config, autofill }: Props) {
   const router = useRouter()
   const [step, setStep] = useState(autofill ? 2 : 0)
-  const [data, setData] = useState<FormData>(autofill ? { ...TEST_DATA, payStubFile: null } : initialFormData)
+  const [data, setData] = useState<FormData>(autofill ? { ...TEST_DATA, documents: [], occupantDocs: [] } : initialFormData)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
@@ -248,7 +248,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
     ].join('\n')
     const blob = new Blob([content], { type: 'application/pdf' })
     const file = new File([blob], 'test-paystub.pdf', { type: 'application/pdf' })
-    setData((prev) => ({ ...prev, payStubFile: file }))
+    setData((prev) => ({ ...prev, documents: [file] }))
   }, [autofill])
 
   const onChange = useCallback((updates: Partial<FormData>) => {
@@ -304,13 +304,21 @@ export default function ApplicationForm({ config, autofill }: Props) {
     try {
       const formPayload = new FormData()
 
-      // Serialize everything except the File object
-      const { payStubFile, ...rest } = data
+      // Serialize everything except File arrays
+      const { documents, occupantDocs, ...rest } = data
       formPayload.append('data', JSON.stringify(rest))
 
-      if (payStubFile) {
-        formPayload.append('payStub', payStubFile, payStubFile.name)
-      }
+      // Primary applicant documents
+      documents.forEach((file, i) => {
+        formPayload.append(`doc_${i}`, file, file.name)
+      })
+
+      // Occupant documents
+      occupantDocs.forEach((files, occIdx) => {
+        files.forEach((file, fileIdx) => {
+          formPayload.append(`occdoc_${occIdx}_${fileIdx}`, file, file.name)
+        })
+      })
 
       const res = await fetch('/api/submit', { method: 'POST', body: formPayload })
       const result = await res.json()

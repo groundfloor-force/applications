@@ -185,7 +185,7 @@ export async function getApplicationByToken(token: string) {
   }
 }
 
-export async function createApplication(data: Omit<FormData, 'payStubFile'>, token?: string): Promise<string> {
+export async function createApplication(data: Omit<FormData, 'documents' | 'occupantDocs'>, token?: string): Promise<string> {
   const { property, occupants = [] } = data
 
   const itemName = [
@@ -285,7 +285,7 @@ export async function createApplication(data: Omit<FormData, 'payStubFile'>, tok
 
 export async function createApplicationUpdate(
   itemId: string,
-  data: Omit<FormData, 'payStubFile'>
+  data: Omit<FormData, 'documents' | 'occupantDocs'>
 ): Promise<void> {
   const { property, occupants = [] } = data
 

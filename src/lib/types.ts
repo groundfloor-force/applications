@@ -82,7 +82,8 @@ export interface FormData {
 
   // Step 6 – Employment
   employerName: string
-  payStubFile: File | null
+  documents: File[]
+  occupantDocs: File[][]
 
   // Step 7 – References + Cosigner
   ref1FirstName: string
@@ -162,7 +163,8 @@ export const initialFormData: FormData = {
   prevLandlordPhone: '',
   prevLandlordEmail: '',
   employerName: '',
-  payStubFile: null,
+  documents: [],
+  occupantDocs: [],
   ref1FirstName: '',
   ref1LastName: '',
   ref1Phone: '',

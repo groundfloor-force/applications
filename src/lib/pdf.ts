@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf'
 import type { FormData } from './types'
 
-export function generateApplicationPdf(data: Omit<FormData, 'payStubFile'>): Buffer {
+export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occupantDocs'>): Buffer {
   const doc = new jsPDF({ unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 20

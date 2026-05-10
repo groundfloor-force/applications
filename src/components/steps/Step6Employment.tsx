@@ -10,16 +10,27 @@ interface Props {
 }
 
 const MAX_MB = 50
+const ACCEPT = '.pdf,.jpg,.jpeg,.png,.docx'
 
 export default function Step6Employment({ data, onChange, errors }: Props) {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    if (file && file.size > MAX_MB * 1024 * 1024) {
-      alert(`File is too large. Maximum size is ${MAX_MB} MB.`)
-      e.target.value = ''
-      return
+  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    const valid: File[] = []
+    for (const f of files) {
+      if (f.size > MAX_MB * 1024 * 1024) {
+        alert(`"${f.name}" is too large (max ${MAX_MB} MB). Skipped.`)
+        continue
+      }
+      valid.push(f)
     }
-    onChange({ payStubFile: file })
+    if (valid.length > 0) {
+      onChange({ documents: [...data.documents, ...valid] })
+    }
+    e.target.value = ''
+  }
+
+  const removeFile = (index: number) => {
+    onChange({ documents: data.documents.filter((_, i) => i !== index) })
   }
 
   return (
@@ -28,12 +39,11 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
         Employment & Income Verification
       </h2>
       <p className="text-sm text-brand-gray mb-2">
-        To make this process faster, please upload a copy of your most recent pay stub.
-        Applications will not be processed without this information.
-        Bank statements are also permitted.
+        Upload income verification for the primary applicant. Pay stubs, bank statements, or
+        employment letters are all accepted. You can upload multiple documents.
       </p>
-      <div className="bg-amber-50 border border-amber-200  p-3 text-sm text-amber-800 mb-6">
-        Accepted formats: PDF, JPG, PNG, DOCX — max {MAX_MB} MB
+      <div className="bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 mb-6">
+        Accepted formats: PDF, JPG, PNG, DOCX — max {MAX_MB} MB per file
       </div>
 
       <div className="form-section">
@@ -54,60 +64,137 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
       </div>
 
       <div className="form-section">
-        <h3 className="section-title">Income Verification Upload</h3>
-        <FormField label="Pay Stub / Bank Statement" required error={errors.payStubFile}>
-          <div className={`mt-1 border-2 border-dashed  p-6 text-center transition-colors ${
-            data.payStubFile ? 'border-primary-400 bg-primary-50' : 'border-brand-border hover:border-primary-300'
-          }`}>
-            {data.payStubFile ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 text-primary-600">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="font-medium">{data.payStubFile.name}</span>
+        <h3 className="section-title">Income Verification — {data.firstName || 'Primary Applicant'}</h3>
+
+        {/* Uploaded files list */}
+        {data.documents.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {data.documents.map((file, i) => (
+              <div key={`${file.name}-${i}`} className="flex items-center gap-3 p-3 bg-primary-50 border border-primary-200">
+                <svg className="w-5 h-5 text-primary-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-brand-dark truncate" style={{ fontWeight: 600 }}>{file.name}</p>
+                  <p className="text-xs text-brand-gray">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
-                <p className="text-xs text-brand-gray">
-                  {(data.payStubFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
                 <button
                   type="button"
-                  onClick={() => onChange({ payStubFile: null })}
-                  className="text-xs text-secondary hover:underline"
+                  onClick={() => removeFile(i)}
+                  className="text-xs text-secondary hover:underline flex-shrink-0"
                 >
-                  Remove file
+                  Remove
                 </button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <svg className="w-10 h-10 mx-auto text-brand-border" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-sm text-brand-gray">
-                  <label className="cursor-pointer text-primary-500 hover:underline font-bold">
-                    Click to upload a file
-                    <input
-                      type="file"
-                      className="sr-only"
-                      accept=".pdf,.jpg,.jpeg,.png,.docx"
-                      onChange={handleFileChange}
-                    />
-                  </label>
-                  {' '}or drag and drop
-                </p>
-                <p className="text-xs text-brand-gray">PDF, JPG, PNG, DOCX up to {MAX_MB} MB</p>
-              </div>
-            )}
+            ))}
           </div>
-        </FormField>
+        )}
 
-        {!data.payStubFile && (
+        {/* Upload area */}
+        <div className="border-2 border-dashed border-brand-border hover:border-primary-300 p-6 text-center transition-colors">
+          <svg className="w-10 h-10 mx-auto text-brand-border mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <p className="text-sm text-brand-gray">
+            <label className="cursor-pointer text-primary-500 hover:underline font-bold">
+              Click to upload files
+              <input
+                type="file"
+                className="sr-only"
+                accept={ACCEPT}
+                multiple
+                onChange={handleFiles}
+              />
+            </label>
+            {' '}or drag and drop
+          </p>
+          <p className="text-xs text-brand-gray mt-1">PDF, JPG, PNG, DOCX up to {MAX_MB} MB each</p>
+        </div>
+
+        {data.documents.length === 0 && (
           <p className="mt-3 text-sm text-brand-gray">
             Don&apos;t have your pay stub handy? You can still submit — but your application will not be
             reviewed until income verification is received. Please email it to us as soon as possible.
           </p>
         )}
       </div>
+
+      {/* Occupant income verification */}
+      {data.occupants.length > 0 && (
+        <div className="form-section">
+          <h3 className="section-title">Income Verification — Additional Occupants</h3>
+          <p className="text-xs text-brand-gray mb-4">
+            Upload income verification for each additional adult applicant.
+          </p>
+          {data.occupants.map((occ, i) => (
+            <OccupantUpload
+              key={i}
+              index={i}
+              name={`${occ.firstName} ${occ.lastName}`.trim() || `Occupant ${i + 2}`}
+              files={data.occupantDocs[i] ?? []}
+              onChange={(files) => {
+                const updated = [...data.occupantDocs]
+                updated[i] = files
+                onChange({ occupantDocs: updated })
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OccupantUpload({
+  index,
+  name,
+  files,
+  onChange,
+}: {
+  index: number
+  name: string
+  files: File[]
+  onChange: (files: File[]) => void
+}) {
+  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files ?? [])
+    const valid = newFiles.filter((f) => {
+      if (f.size > MAX_MB * 1024 * 1024) {
+        alert(`"${f.name}" is too large (max ${MAX_MB} MB). Skipped.`)
+        return false
+      }
+      return true
+    })
+    if (valid.length > 0) onChange([...files, ...valid])
+    e.target.value = ''
+  }
+
+  return (
+    <div className={`${index > 0 ? 'mt-6 pt-6 border-t border-brand-border' : ''}`}>
+      <p className="text-sm text-brand-dark mb-3" style={{ fontWeight: 600 }}>{name}</p>
+
+      {files.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {files.map((file, i) => (
+            <div key={`${file.name}-${i}`} className="flex items-center gap-3 p-2 bg-primary-50 border border-primary-200">
+              <svg className="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm text-brand-dark truncate flex-1">{file.name}</span>
+              <button type="button" onClick={() => onChange(files.filter((_, j) => j !== i))}
+                className="text-xs text-secondary hover:underline flex-shrink-0">Remove</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-primary-500 hover:underline" style={{ fontWeight: 600 }}>
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        Upload document{files.length > 0 ? 's' : ''}
+        <input type="file" className="sr-only" accept={ACCEPT} multiple onChange={handleFiles} />
+      </label>
     </div>
   )
 }

@@ -16,8 +16,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing form data' }, { status: 400 })
     }
 
-    const data: Omit<FormData, 'payStubFile'> = JSON.parse(raw)
-    const file = multipart.get('payStub') as File | null
+    const data: Omit<FormData, 'documents' | 'occupantDocs'> = JSON.parse(raw)
+
+    // Collect all uploaded files from multipart
+    const allFiles: { file: File; label: string }[] = []
+
+    // Primary applicant documents (doc_0, doc_1, ...)
+    for (const [key, value] of multipart.entries()) {
+      if (key.startsWith('doc_') && value instanceof File && value.size > 0) {
+        allFiles.push({ file: value, label: `${data.firstName}_${data.lastName}` })
+      }
+      if (key.startsWith('occdoc_') && value instanceof File && value.size > 0) {
+        // occdoc_0_1 → occupant index 0, file index 1
+        const parts = key.split('_')
+        const occIdx = parseInt(parts[1])
+        const occ = data.occupants?.[occIdx]
+        const occName = occ ? `${occ.firstName}_${occ.lastName}` : `Occupant_${occIdx + 2}`
+        allFiles.push({ file: value, label: occName })
+      }
+    }
 
     // Generate a unique status token
     const token = crypto.randomUUID()
@@ -33,10 +50,11 @@ export async function POST(req: NextRequest) {
     const pdfName = `Application_${data.firstName}_${data.lastName}_${new Date().toISOString().split('T')[0]}.pdf`
     await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
 
-    // 4. Upload pay stub / income document if provided
-    if (file && file.size > 0) {
+    // 4. Upload all income verification documents
+    for (const { file, label } of allFiles) {
       const buf = Buffer.from(await file.arrayBuffer())
-      await uploadFileToMonday(itemId, buf, file.name, file.type || 'application/octet-stream')
+      const safeName = `${label}_${file.name}`.replace(/[^a-zA-Z0-9._-]/g, '_')
+      await uploadFileToMonday(itemId, buf, safeName, file.type || 'application/octet-stream')
     }
 
     // 5. Send emails (non-blocking — failures don't fail the submission)

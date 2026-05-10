@@ -78,7 +78,7 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
 
           <ReviewCard title="Employment">
             <Row label="Employer" value={data.employerName} />
-            <Row label="Income doc" value={data.payStubFile ? data.payStubFile.name : 'Not attached'} />
+            <Row label="Documents" value={data.documents.length > 0 ? `${data.documents.length} file${data.documents.length > 1 ? 's' : ''} attached` : 'None attached'} />
           </ReviewCard>
 
           <ReviewCard title="Rental History">
