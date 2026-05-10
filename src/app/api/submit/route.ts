@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createApplication, createApplicationUpdate, uploadFileToMonday } from '@/lib/monday'
 import { sendConfirmationEmail, sendNotificationEmail } from '@/lib/email'
 import { getConfig } from '@/lib/config'
+import { generateApplicationPdf } from '@/lib/pdf'
 import type { FormData } from '@/lib/types'
 
 export const maxDuration = 60
@@ -27,13 +28,18 @@ export async function POST(req: NextRequest) {
     // 2. Post detailed update note
     await createApplicationUpdate(itemId, data)
 
-    // 3. Upload pay stub if provided
+    // 3. Generate application PDF and upload
+    const pdfBuffer = generateApplicationPdf(data)
+    const pdfName = `Application_${data.firstName}_${data.lastName}_${new Date().toISOString().split('T')[0]}.pdf`
+    await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
+
+    // 4. Upload pay stub / income document if provided
     if (file && file.size > 0) {
       const buf = Buffer.from(await file.arrayBuffer())
       await uploadFileToMonday(itemId, buf, file.name, file.type || 'application/octet-stream')
     }
 
-    // 4. Send emails (non-blocking — failures don't fail the submission)
+    // 5. Send emails (non-blocking — failures don't fail the submission)
     const mondayItemUrl = `https://groundfloor-force.monday.com/boards/${640654033}/pulses/${itemId}`
     const config = await getConfig().catch(() => null)
 

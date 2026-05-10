@@ -225,6 +225,13 @@ export async function createApplication(data: Omit<FormData, 'payStubFile'>, tok
     // Status
     status1: { label: 'New' },
 
+    // Deposit/Fee → Pending Deposit
+    status70: { label: 'Pending Deposit' },
+
+    // Viewing Status — set to "Viewing Complete" if they saw the unit
+    ...((data.viewedUnit === 'Yes - In Person' || data.viewedUnit === 'Yes - Virtual Tour')
+      && { status29: { label: 'Viewing Complete' } }),
+
     // Application token for status page
     ...(token && { text0: token }),
   }
@@ -302,7 +309,10 @@ export async function createApplicationUpdate(
     `Adults (18+): ${data.numOccupants}`,
     `Vehicles: ${data.numVehicles || '—'}`,
     `Requested Move-In Date: ${data.moveInDate || '—'}`,
+    '',
+    '<b>Unit Viewing</b>',
     `Viewed Unit: ${data.viewedUnit || '—'}`,
+    ...(data.viewedByName ? [`Shown By: ${data.viewedByName}`] : []),
     '',
     '<b>Employment (Primary Applicant)</b>',
     `Employer Name: ${data.employerName || '—'}`,

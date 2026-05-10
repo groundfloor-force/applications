@@ -72,6 +72,8 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
             <Row label="Vehicles" value={data.numVehicles} />
             <Row label="Children" value={data.children} />
             <Row label="Pets" value={data.pets} />
+            <Row label="Viewed Unit" value={data.viewedUnit} />
+            <Row label="Shown By" value={data.viewedByName} />
           </ReviewCard>
 
           <ReviewCard title="Employment">

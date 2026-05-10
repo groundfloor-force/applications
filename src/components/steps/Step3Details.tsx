@@ -67,15 +67,6 @@ export default function Step3Details({ data, onChange, errors }: Props) {
             hint="The date you are requesting to receive the keys">
             <input type="date" className="form-input" value={data.moveInDate} onChange={f('moveInDate')} />
           </FormField>
-          <FormField label="Have you viewed the unit?" required error={errors.viewedUnit}>
-            <select className="form-input" value={data.viewedUnit} onChange={f('viewedUnit')}>
-              <option value="">Select...</option>
-              <option value="No">No</option>
-              <option value="Yes - In Person">Yes – In Person</option>
-              <option value="Yes - Virtual Tour">Yes – Virtual Tour</option>
-              <option value="Scheduled">Scheduled</option>
-            </select>
-          </FormField>
         </div>
       </div>
 

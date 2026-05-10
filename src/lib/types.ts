@@ -65,6 +65,7 @@ export interface FormData {
   numVehicles: string
   moveInDate: string
   viewedUnit: string
+  viewedByName: string
 
   // Step 4 – Additional Occupants
   occupants: Occupant[]
@@ -150,6 +151,7 @@ export const initialFormData: FormData = {
   numVehicles: '',
   moveInDate: '',
   viewedUnit: '',
+  viewedByName: '',
   occupants: [],
   prevLandlordFirstName: '',
   prevLandlordLastName: '',

@@ -31,6 +31,7 @@ function validate(step: number, data: FormData): Record<string, string> {
     if (!data.currentAddress.trim()) e.currentAddress = 'Street address is required.'
     if (!data.currentCity.trim()) e.currentCity = 'City is required.'
     if (!data.children.trim()) e.children = 'Please enter number of children (or "None").'
+    if (!data.viewedUnit) e.viewedUnit = 'Please indicate if you have seen the unit.'
   }
 
   if (step === 3) {
@@ -38,7 +39,6 @@ function validate(step: number, data: FormData): Record<string, string> {
     if (!data.monthlyRent) e.monthlyRent = 'Monthly rent is required.'
     if (!data.securityDeposit) e.securityDeposit = 'Security deposit is required.'
     if (!data.moveInDate) e.moveInDate = 'Move-in date is required.'
-    if (!data.viewedUnit) e.viewedUnit = 'Please indicate if you have viewed the unit.'
     if (!data.numVehicles.trim()) e.numVehicles = 'Please enter number of vehicles (0 if none).'
   }
 
@@ -116,7 +116,8 @@ const TEST_DATA: Omit<FormData, 'payStubFile'> = {
   numOccupants: 4,
   numVehicles: '2',
   moveInDate: '2025-08-01',
-  viewedUnit: 'Yes',
+  viewedUnit: 'Yes - In Person',
+  viewedByName: 'Sarah Jones',
   occupants: [
     {
       firstName: 'Daniel',

@@ -108,6 +108,28 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
       </div>
 
       <div className="form-section">
+        <h3 className="section-title">Unit Viewing</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Have you seen this unit?" required error={err('viewedUnit')}>
+            <select className="form-input" value={data.viewedUnit}
+              onChange={f('viewedUnit')} onBlur={blur('viewedUnit')}>
+              <option value="">Select...</option>
+              <option value="No">No</option>
+              <option value="Yes - In Person">Yes — In Person</option>
+              <option value="Yes - Virtual Tour">Yes — Virtual Tour</option>
+              <option value="Scheduled">Viewing Scheduled</option>
+            </select>
+          </FormField>
+          {(data.viewedUnit === 'Yes - In Person' || data.viewedUnit === 'Yes - Virtual Tour') && (
+            <FormField label="Who showed you the unit?" hint="Name of the person who conducted the viewing">
+              <input className="form-input" value={data.viewedByName}
+                onChange={f('viewedByName')} placeholder="e.g. Sarah Jones" />
+            </FormField>
+          )}
+        </div>
+      </div>
+
+      <div className="form-section">
         <h3 className="section-title">Household</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Number of Children (ages and gender)" required error={err('children')}
