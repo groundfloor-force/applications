@@ -37,11 +37,26 @@ export interface Occupant {
   employmentTo: string
   monthlyGrossSalary: string
   positionHeld: string
+  // Roommate-vs-family flow: if false, this occupant has their own
+  // current address and previous landlord reference (captured below).
+  sameAsPrimary: boolean
+  currentAddress: string
+  currentAddressLine2: string
+  currentCity: string
+  currentProvince: string
+  currentPostal: string
+  prevLandlordFirstName: string
+  prevLandlordLastName: string
+  prevLandlordPhone: string
+  prevLandlordEmail: string
+  prevReasonForLeaving: string
 }
 
 export interface FormData {
-  // Step 1
+  // Step 1 — selected properties in order of preference.
+  // `property` is kept in sync with `properties[0]` for downstream compatibility.
   property: Property | null
+  properties: Property[]
 
   // Step 2 – Primary Applicant
   firstName: string
@@ -129,10 +144,22 @@ export const emptyOccupant = (): Occupant => ({
   employmentTo: '',
   monthlyGrossSalary: '',
   positionHeld: '',
+  sameAsPrimary: true,
+  currentAddress: '',
+  currentAddressLine2: '',
+  currentCity: '',
+  currentProvince: '',
+  currentPostal: '',
+  prevLandlordFirstName: '',
+  prevLandlordLastName: '',
+  prevLandlordPhone: '',
+  prevLandlordEmail: '',
+  prevReasonForLeaving: '',
 })
 
 export const initialFormData: FormData = {
   property: null,
+  properties: [],
   firstName: '',
   lastName: '',
   email: '',

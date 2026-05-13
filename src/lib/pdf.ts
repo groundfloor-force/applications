@@ -151,6 +151,15 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
       label('Employer Phone', occ.employerPhone)
       label('Employment Period', `${occ.employmentFrom || '—'} to ${occ.employmentTo || 'Current'}`)
       label('Monthly Gross', occ.monthlyGrossSalary ? `$${occ.monthlyGrossSalary}` : '—')
+      if (occ.sameAsPrimary === false) {
+        label('Current Address', [occ.currentAddress, occ.currentAddressLine2, occ.currentCity, occ.currentProvince, occ.currentPostal].filter(Boolean).join(', '))
+        label('Prev. Landlord', `${occ.prevLandlordFirstName || ''} ${occ.prevLandlordLastName || ''}`.trim())
+        label('Landlord Phone', occ.prevLandlordPhone || '')
+        label('Landlord Email', occ.prevLandlordEmail || '')
+        label('Reason for Leaving', occ.prevReasonForLeaving || '')
+      } else {
+        label('Address & Landlord', 'Same as primary applicant')
+      }
       spacer(6)
     })
   }

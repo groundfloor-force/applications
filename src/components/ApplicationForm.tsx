@@ -78,26 +78,29 @@ interface Props {
   autofill?: boolean
 }
 
+const TEST_PROPERTY = {
+  id: '474955392',
+  name: '45 Fairview Knoll #3',
+  address: '45 Fairview Knoll Dr',
+  unit: '3',
+  city: 'Moncton',
+  postal: 'E1A 9G3',
+  rent: 1350,
+  bedrooms: '2 Bed',
+  bathrooms: '1 Bath',
+  pictureUrl: '',
+  available: 'NOW',
+  laundry: 'IS-HU',
+  status: 'VACANT',
+  parking: '1',
+  pets: 'Y/Y',
+  balcony: 'NO',
+  floor: 'Basement',
+}
+
 const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
-  property: {
-    id: '474955392',
-    name: '45 Fairview Knoll #3',
-    address: '45 Fairview Knoll Dr',
-    unit: '3',
-    city: 'Moncton',
-    postal: 'E1A 9G3',
-    rent: 1350,
-    bedrooms: '2 Bed',
-    bathrooms: '1 Bath',
-    pictureUrl: '',
-    available: 'NOW',
-    laundry: 'IS-HU',
-    status: 'VACANT',
-    parking: '1',
-    pets: 'Y/Y',
-    balcony: 'NO',
-    floor: 'Basement',
-  },
+  property: TEST_PROPERTY,
+  properties: [TEST_PROPERTY],
   firstName: 'Jessica',
   lastName: 'Tester',
   email: 'jessica.tester@example.com',
@@ -138,14 +141,20 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
       employmentTo: '',
       monthlyGrossSalary: '5200',
       positionHeld: 'Senior Analyst',
+      sameAsPrimary: true,
+      currentAddress: '', currentAddressLine2: '', currentCity: '',
+      currentProvince: '', currentPostal: '',
+      prevLandlordFirstName: '', prevLandlordLastName: '',
+      prevLandlordPhone: '', prevLandlordEmail: '',
+      prevReasonForLeaving: '',
     },
     {
       firstName: 'Olivia',
-      lastName: 'Tester',
-      email: 'olivia.tester@example.com',
+      lastName: 'Roommate',
+      email: 'olivia.roommate@example.com',
       phone: '506-555-1003',
       birthDate: '1998-01-22',
-      relationship: 'Sibling',
+      relationship: 'Roommate',
       occupation: 'Student',
       employerName: 'Universite de Moncton',
       employerAddress: '18 Ave Antonine-Maillet',
@@ -158,6 +167,17 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
       employmentTo: '',
       monthlyGrossSalary: '1800',
       positionHeld: 'Teaching Assistant',
+      sameAsPrimary: false,
+      currentAddress: '42 University Ave',
+      currentAddressLine2: 'Apt 12',
+      currentCity: 'Moncton',
+      currentProvince: 'NB',
+      currentPostal: 'E1A 0E1',
+      prevLandlordFirstName: 'Marie',
+      prevLandlordLastName: 'Leblanc',
+      prevLandlordPhone: '506-555-7777',
+      prevLandlordEmail: 'marie.leblanc@example.com',
+      prevReasonForLeaving: 'Moving in with friends to share rent',
     },
     {
       firstName: 'Ryan',
@@ -178,6 +198,12 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
       employmentTo: '',
       monthlyGrossSalary: '1200',
       positionHeld: 'Team Member',
+      sameAsPrimary: true,
+      currentAddress: '', currentAddressLine2: '', currentCity: '',
+      currentProvince: '', currentPostal: '',
+      prevLandlordFirstName: '', prevLandlordLastName: '',
+      prevLandlordPhone: '', prevLandlordEmail: '',
+      prevReasonForLeaving: '',
     },
   ],
   prevLandlordFirstName: 'Robert',
@@ -409,7 +435,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
             {data.property && (
               <div className="hidden lg:block lg:w-64 flex-shrink-0 lg:sticky lg:top-24">
                 <div className="border border-brand-border bg-white overflow-hidden">
-                  {/* Photo */}
+                  {/* Photo (primary property) */}
                   <div className="h-36 bg-brand-bg relative overflow-hidden">
                     {data.property.pictureUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -431,24 +457,48 @@ export default function ApplicationForm({ config, autofill }: Props) {
                   </div>
                   {/* Details */}
                   <div className="p-4">
-                    <p className="text-xs text-primary-500 uppercase tracking-widest mb-1" style={{ fontWeight: 600 }}>Applying for</p>
-                    <p className="text-brand-dark text-sm leading-snug mb-2" style={{ fontWeight: 600 }}>
-                      {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''}
+                    <p className="text-xs text-primary-500 uppercase tracking-widest mb-1" style={{ fontWeight: 600 }}>
+                      Applying for {data.properties.length > 1 && `(${data.properties.length})`}
                     </p>
-                    <p className="text-xs text-brand-gray mb-3">{data.property.city}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {data.property.rent > 0 && (
-                        <span className="text-xs bg-primary-500 text-white px-2 py-0.5" style={{ fontWeight: 600 }}>
-                          ${data.property.rent.toLocaleString()}/mo
-                        </span>
-                      )}
-                      {data.property.bedrooms && (
-                        <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bedrooms}</span>
-                      )}
-                      {data.property.bathrooms && (
-                        <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bathrooms}</span>
-                      )}
-                    </div>
+                    {data.properties.length > 1 ? (
+                      <div className="space-y-2 mb-3">
+                        {data.properties.map((p, i) => (
+                          <div key={p.id} className="flex gap-2 items-start">
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-500 text-white flex items-center justify-center text-[10px] font-bold mt-0.5">
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-brand-dark text-xs leading-snug truncate" style={{ fontWeight: 600 }}>
+                                {p.address}{p.unit ? `, Unit ${p.unit}` : ''}
+                              </p>
+                              <p className="text-[10px] text-brand-gray">
+                                {p.city}{p.rent > 0 && ` · $${p.rent.toLocaleString()}/mo`}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-brand-dark text-sm leading-snug mb-2" style={{ fontWeight: 600 }}>
+                          {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''}
+                        </p>
+                        <p className="text-xs text-brand-gray mb-3">{data.property.city}</p>
+                        <div className="flex flex-wrap gap-1">
+                          {data.property.rent > 0 && (
+                            <span className="text-xs bg-primary-500 text-white px-2 py-0.5" style={{ fontWeight: 600 }}>
+                              ${data.property.rent.toLocaleString()}/mo
+                            </span>
+                          )}
+                          {data.property.bedrooms && (
+                            <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bedrooms}</span>
+                          )}
+                          {data.property.bathrooms && (
+                            <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bathrooms}</span>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -457,31 +507,54 @@ export default function ApplicationForm({ config, autofill }: Props) {
             {/* Mobile property banner */}
             {data.property && (
               <div className="lg:hidden mb-6 border border-brand-border bg-white overflow-hidden">
-                <div className="flex">
-                  <div className="w-28 flex-shrink-0 bg-brand-bg relative overflow-hidden">
-                    {data.property.pictureUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={data.property.pictureUrl} alt={data.property.address}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e6f0f9 0%, #f1f4f8 100%)' }}>
-                        <svg className="w-8 h-8 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 p-3 min-w-0">
-                    <p className="text-xs text-primary-500 uppercase tracking-widest mb-0.5" style={{ fontWeight: 600 }}>Applying for</p>
-                    <p className="text-brand-dark text-sm leading-snug" style={{ fontWeight: 600 }}>
-                      {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''} — {data.property.city}
+                {data.properties.length > 1 ? (
+                  <div className="p-3">
+                    <p className="text-xs text-primary-500 uppercase tracking-widest mb-2" style={{ fontWeight: 600 }}>
+                      Applying for {data.properties.length} properties
                     </p>
-                    {data.property.rent > 0 && (
-                      <p className="text-xs text-primary-500 mt-1" style={{ fontWeight: 600 }}>${data.property.rent.toLocaleString()}/mo</p>
-                    )}
+                    <div className="space-y-1.5">
+                      {data.properties.map((p, i) => (
+                        <div key={p.id} className="flex gap-2 items-start">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-500 text-white flex items-center justify-center text-[10px] font-bold mt-0.5">
+                            {i + 1}
+                          </span>
+                          <p className="text-brand-dark text-sm leading-snug" style={{ fontWeight: 600 }}>
+                            {p.address}{p.unit ? `, Unit ${p.unit}` : ''}
+                            <span className="text-xs text-brand-gray ml-2 font-normal">
+                              {p.city}{p.rent > 0 && ` · $${p.rent.toLocaleString()}/mo`}
+                            </span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex">
+                    <div className="w-28 flex-shrink-0 bg-brand-bg relative overflow-hidden">
+                      {data.property.pictureUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={data.property.pictureUrl} alt={data.property.address}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e6f0f9 0%, #f1f4f8 100%)' }}>
+                          <svg className="w-8 h-8 text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 p-3 min-w-0">
+                      <p className="text-xs text-primary-500 uppercase tracking-widest mb-0.5" style={{ fontWeight: 600 }}>Applying for</p>
+                      <p className="text-brand-dark text-sm leading-snug" style={{ fontWeight: 600 }}>
+                        {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''} — {data.property.city}
+                      </p>
+                      {data.property.rent > 0 && (
+                        <p className="text-xs text-primary-500 mt-1" style={{ fontWeight: 600 }}>${data.property.rent.toLocaleString()}/mo</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

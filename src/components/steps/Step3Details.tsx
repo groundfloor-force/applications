@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { FormData } from '@/lib/types'
+import { FormData, emptyOccupant } from '@/lib/types'
 import FormField from '@/components/FormField'
 
 interface Props {
@@ -22,12 +22,7 @@ export default function Step3Details({ data, onChange, errors }: Props) {
     if (data.occupants.length !== needed) {
       const base = [...data.occupants]
       while (base.length < needed) {
-        base.push({
-          firstName: '', lastName: '', email: '', phone: '', birthDate: '',
-          relationship: '', occupation: '', employerName: '', employerAddress: '',
-          employerAddressLine2: '', employerCity: '', employerProvince: '', employerPostal: '',
-          employerPhone: '', employmentFrom: '', employmentTo: '', monthlyGrossSalary: '', positionHeld: '',
-        })
+        base.push(emptyOccupant())
       }
       onChange({ occupants: base.slice(0, needed) })
     }

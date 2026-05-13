@@ -11,17 +11,20 @@ interface Props {
   onFieldBlur?: (field: string) => void
 }
 
+const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th']
+
 function UnitRow({
   property,
-  selected,
+  selectedRank,
   onClick,
   onDetails,
 }: {
   property: Property
-  selected: boolean
+  selectedRank: number  // 0 if not selected, 1+ for preference rank
   onClick: () => void
   onDetails: () => void
 }) {
+  const selected = selectedRank > 0
   const badges = [
     property.bedrooms,
     property.bathrooms,
@@ -40,17 +43,13 @@ function UnitRow({
           : 'border-brand-border hover:border-primary-300 hover:bg-brand-bg'
       }`}
     >
-      {/* Check indicator */}
+      {/* Rank indicator */}
       <div
-        className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-          selected ? 'bg-primary-500 border-primary-500' : 'border-brand-border'
+        className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors ${
+          selected ? 'bg-primary-500 border-primary-500 text-white' : 'border-brand-border text-brand-gray'
         }`}
       >
-        {selected && (
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        )}
+        {selected ? selectedRank : ''}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -92,7 +91,7 @@ function UnitRow({
   )
 }
 
-export default function Step1Property({ data, onChange, errors, onNext }: Props) {
+export default function Step1Property({ data, onChange, onNext }: Props) {
   const [allProperties, setAllProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState('')
@@ -115,6 +114,40 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
       })
   }, [])
 
+  const properties = data.properties || []
+  const selectedRank = (id: string) => {
+    const i = properties.findIndex((p) => p.id === id)
+    return i === -1 ? 0 : i + 1
+  }
+
+  // Selection updates keep `property` in sync with `properties[0]` so the
+  // existing sidebar / monthlyRent / pdf code keeps working unchanged.
+  const updateSelection = (next: Property[]) => {
+    const primary = next[0] ?? null
+    onChange({
+      properties: next,
+      property: primary,
+      monthlyRent: primary?.rent ? String(primary.rent) : '',
+    })
+  }
+
+  const toggleProperty = (p: Property) => {
+    const exists = properties.some((x) => x.id === p.id)
+    if (exists) {
+      updateSelection(properties.filter((x) => x.id !== p.id))
+    } else {
+      updateSelection([...properties, p])
+    }
+  }
+
+  const moveProperty = (index: number, direction: -1 | 1) => {
+    const target = index + direction
+    if (target < 0 || target >= properties.length) return
+    const next = [...properties]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    updateSelection(next)
+  }
+
   // Group by address, then filter by search query
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -127,7 +160,6 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
         p.name.toLowerCase().includes(q)
     )
 
-    // Group by address
     const groups = new Map<string, Property[]>()
     for (const p of matched) {
       const key = p.address || p.name
@@ -135,13 +167,13 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
       groups.get(key)!.push(p)
     }
 
-    return Array.from(groups.entries()).slice(0, 5) // max 5 addresses
+    return Array.from(groups.entries()).slice(0, 5)
   }, [query, allProperties])
 
   const noResults = query.trim().length >= 2 && results.length === 0 && !loading
 
   const handleSkip = () => {
-    onChange({ property: null, monthlyRent: '' })
+    updateSelection([])
     onNext()
   }
 
@@ -150,10 +182,99 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
       <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
         Property Search
       </h2>
-      <p className="text-sm text-brand-gray mb-6">
-        Type the address of the unit you are applying for. If you don&apos;t know the address yet,
-        you can proceed without selecting one.
+      <p className="text-sm text-brand-gray mb-2">
+        Type the address of the unit you are applying for. You can select multiple units in
+        order of preference — we will create one application per property.
       </p>
+      <p className="text-sm text-brand-gray mb-6">
+        If you don&apos;t know the address yet, you can proceed without selecting one.
+      </p>
+
+      {/* Selected list */}
+      {properties.length > 0 && (
+        <div className="mb-5 border border-primary-200 bg-primary-50">
+          <div className="px-4 py-2 border-b border-primary-200 flex items-center justify-between">
+            <p className="text-xs text-primary-700 uppercase tracking-wide" style={{ fontWeight: 700 }}>
+              Selected — {properties.length} {properties.length === 1 ? 'property' : 'properties'} in order of preference
+            </p>
+            <button
+              type="button"
+              onClick={() => updateSelection([])}
+              className="text-xs text-primary-600 hover:underline"
+            >
+              Clear all
+            </button>
+          </div>
+          <div className="p-2 space-y-1.5">
+            {properties.map((p, i) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-2 bg-white border border-primary-200 px-3 py-2"
+              >
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary-500 text-white flex items-center justify-center text-xs font-bold">
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-brand-dark truncate" style={{ fontWeight: 600 }}>
+                    {p.address}{p.unit ? `, Unit ${p.unit}` : ''}
+                    <span className="text-xs text-brand-gray ml-2 font-normal">
+                      {ORDINAL[i] ?? `${i + 1}th`} choice
+                    </span>
+                  </p>
+                  <p className="text-xs text-brand-gray">
+                    {p.city} {p.rent > 0 && `· $${p.rent.toLocaleString()}/mo`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveProperty(i, -1)}
+                    disabled={i === 0}
+                    aria-label="Move up"
+                    title="Move up"
+                    className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveProperty(i, 1)}
+                    disabled={i === properties.length - 1}
+                    aria-label="Move down"
+                    title="Move down"
+                    className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleProperty(p)}
+                    aria-label="Remove"
+                    title="Remove"
+                    className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-secondary hover:bg-red-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-4 py-3 border-t border-primary-200">
+            <button type="button" onClick={onNext} className="btn-primary w-full sm:w-auto">
+              Continue with {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+              <svg className="w-4 h-4 ml-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search input */}
       <div className="relative mb-2">
@@ -172,18 +293,15 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
         <input
           type="text"
           className="form-input pl-9 text-base"
-          placeholder="Type a street address or city..."
+          placeholder={properties.length > 0 ? 'Add another property...' : 'Type a street address or city...'}
           value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            if (data.property) onChange({ property: null, monthlyRent: '' })
-          }}
+          onChange={(e) => setQuery(e.target.value)}
           autoComplete="off"
         />
         {query && (
           <button
             type="button"
-            onClick={() => { setQuery(''); onChange({ property: null, monthlyRent: '' }) }}
+            onClick={() => setQuery('')}
             className="absolute inset-y-0 right-3 flex items-center text-brand-gray hover:text-brand-dark"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -192,10 +310,6 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
           </button>
         )}
       </div>
-
-      {errors.property && (
-        <p className="text-secondary text-sm mb-3">{errors.property}</p>
-      )}
 
       {fetchError && (
         <p className="text-amber-600 text-xs mb-3">{fetchError}</p>
@@ -216,26 +330,14 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
                   <UnitRow
                     key={p.id}
                     property={p}
-                    selected={data.property?.id === p.id}
-                    onClick={() => onChange({ property: p, monthlyRent: p.rent ? String(p.rent) : '' })}
+                    selectedRank={selectedRank(p.id)}
+                    onClick={() => toggleProperty(p)}
                     onDetails={() => setPreview(p)}
                   />
                 ))}
               </div>
             </div>
           ))}
-
-          {/* Continue button — appears when a unit is selected */}
-          {data.property && (
-            <div className="pt-2">
-              <button type="button" onClick={onNext} className="btn-primary w-full sm:w-auto">
-                Continue with this unit
-                <svg className="w-4 h-4 ml-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -254,7 +356,6 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
       {preview && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4">
           <div className="bg-white w-full sm:max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            {/* Photo */}
             <div className="relative h-44 bg-brand-bg flex-shrink-0">
               {preview.pictureUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -275,7 +376,6 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
               </button>
             </div>
 
-            {/* Content */}
             <div className="p-5 overflow-y-auto">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h3 className="text-lg text-brand-dark leading-snug" style={{ fontWeight: 700 }}>
@@ -316,46 +416,51 @@ export default function Step1Property({ data, onChange, errors, onNext }: Props)
               <button
                 type="button"
                 onClick={() => {
-                  onChange({ property: preview, monthlyRent: preview.rent ? String(preview.rent) : '' })
+                  if (!properties.some((x) => x.id === preview.id)) {
+                    updateSelection([...properties, preview])
+                  }
                   setPreview(null)
                 }}
                 className="btn-primary w-full justify-center"
+                disabled={properties.some((x) => x.id === preview.id)}
               >
-                Select This Unit
+                {properties.some((x) => x.id === preview.id) ? 'Already Selected' : 'Add to Selection'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Skip option */}
-      <div className="mt-6 pt-5 border-t border-brand-border">
-        <p className="text-sm text-brand-gray mb-3">
-          Don&apos;t see your unit listed, or don&apos;t know the address yet?
-        </p>
-        <button
-          type="button"
-          onClick={handleSkip}
-          className="w-full flex items-center gap-4 px-5 py-4 border-2 border-dashed border-brand-border hover:border-primary-400 hover:bg-primary-50 transition-all group text-left"
-        >
-          <div className="flex-shrink-0 w-11 h-11 rounded-full bg-brand-bg group-hover:bg-primary-100 flex items-center justify-center transition-colors">
-            <svg className="w-5 h-5 text-brand-gray group-hover:text-primary-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      {/* Skip option — only show when nothing is selected */}
+      {properties.length === 0 && (
+        <div className="mt-6 pt-5 border-t border-brand-border">
+          <p className="text-sm text-brand-gray mb-3">
+            Don&apos;t see your unit listed, or don&apos;t know the address yet?
+          </p>
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="w-full flex items-center gap-4 px-5 py-4 border-2 border-dashed border-brand-border hover:border-primary-400 hover:bg-primary-50 transition-all group text-left"
+          >
+            <div className="flex-shrink-0 w-11 h-11 rounded-full bg-brand-bg group-hover:bg-primary-100 flex items-center justify-center transition-colors">
+              <svg className="w-5 h-5 text-brand-gray group-hover:text-primary-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-brand-dark group-hover:text-primary-600 transition-colors" style={{ fontWeight: 600 }}>
+                Continue without selecting a property
+              </p>
+              <p className="text-xs text-brand-gray group-hover:text-primary-400 transition-colors mt-0.5">
+                You&apos;ll enter the address manually on the next step
+              </p>
+            </div>
+            <svg className="w-5 h-5 text-brand-border group-hover:text-primary-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-brand-dark group-hover:text-primary-600 transition-colors" style={{ fontWeight: 600 }}>
-              Continue without selecting a property
-            </p>
-            <p className="text-xs text-brand-gray group-hover:text-primary-400 transition-colors mt-0.5">
-              You&apos;ll enter the address manually on the next step
-            </p>
-          </div>
-          <svg className="w-5 h-5 text-brand-border group-hover:text-primary-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
+          </button>
+        </div>
+      )}
     </div>
   )
 }

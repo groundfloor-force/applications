@@ -3,7 +3,7 @@ import { createApplication, createApplicationUpdate, uploadFileToMonday } from '
 import { sendConfirmationEmail, sendNotificationEmail } from '@/lib/email'
 import { getConfig } from '@/lib/config'
 import { generateApplicationPdf } from '@/lib/pdf'
-import type { FormData } from '@/lib/types'
+import type { FormData, Property } from '@/lib/types'
 
 export const maxDuration = 60
 
@@ -18,48 +18,90 @@ export async function POST(req: NextRequest) {
 
     const data: Omit<FormData, 'documents' | 'occupantDocs'> = JSON.parse(raw)
 
-    // Collect all uploaded files from multipart
-    const allFiles: { file: File; label: string }[] = []
-
-    // Primary applicant documents (doc_0, doc_1, ...)
+    // Collect uploaded files into reusable buffers (consumed once, used N times)
+    const fileBuffers: { buffer: Buffer; name: string; type: string; label: string }[] = []
     for (const [key, value] of multipart.entries()) {
-      if (key.startsWith('doc_') && value instanceof File && value.size > 0) {
-        allFiles.push({ file: value, label: `${data.firstName}_${data.lastName}` })
-      }
-      if (key.startsWith('occdoc_') && value instanceof File && value.size > 0) {
-        // occdoc_0_1 → occupant index 0, file index 1
-        const parts = key.split('_')
-        const occIdx = parseInt(parts[1])
-        const occ = data.occupants?.[occIdx]
-        const occName = occ ? `${occ.firstName}_${occ.lastName}` : `Occupant_${occIdx + 2}`
-        allFiles.push({ file: value, label: occName })
+      if (value instanceof File && value.size > 0) {
+        if (key.startsWith('doc_')) {
+          const buf = Buffer.from(await value.arrayBuffer())
+          fileBuffers.push({
+            buffer: buf,
+            name: value.name,
+            type: value.type || 'application/octet-stream',
+            label: `${data.firstName}_${data.lastName}`,
+          })
+        }
+        if (key.startsWith('occdoc_')) {
+          const parts = key.split('_')
+          const occIdx = parseInt(parts[1])
+          const occ = data.occupants?.[occIdx]
+          const occName = occ ? `${occ.firstName}_${occ.lastName}` : `Occupant_${occIdx + 2}`
+          const buf = Buffer.from(await value.arrayBuffer())
+          fileBuffers.push({
+            buffer: buf,
+            name: value.name,
+            type: value.type || 'application/octet-stream',
+            label: occName,
+          })
+        }
       }
     }
 
-    // Generate a unique status token
+    // Resolve the list of properties to create items for.
+    // `properties` is the multi-select list; if empty, fall back to `property` (legacy / skipped).
+    const propertyList: (Property | null)[] = (data.properties && data.properties.length > 0)
+      ? data.properties
+      : [data.property]
+
     const token = crypto.randomUUID()
+    const allPropertiesSummary = propertyList
+      .filter((p): p is Property => p !== null)
+      .map((p) => ({ address: p.address, unit: p.unit, city: p.city, rent: p.rent }))
 
-    // 1. Create item on Applications board (with token)
-    const itemId = await createApplication(data, token)
+    const dateStr = new Date().toISOString().split('T')[0]
+    const itemIds: string[] = []
 
-    // 2. Post detailed update note
-    await createApplicationUpdate(itemId, data)
+    // Create one Monday item per property, in preference order.
+    for (let i = 0; i < propertyList.length; i++) {
+      const prop = propertyList[i]
+      const itemData = {
+        ...data,
+        property: prop,
+        // Use this property's rent for the Monday rent column when available
+        monthlyRent: prop?.rent ? String(prop.rent) : data.monthlyRent,
+      }
+      const preference = propertyList.length > 1
+        ? { rank: i + 1, total: propertyList.length }
+        : null
 
-    // 3. Generate application PDF and upload
-    const pdfBuffer = generateApplicationPdf(data)
-    const pdfName = `Application_${data.firstName}_${data.lastName}_${new Date().toISOString().split('T')[0]}.pdf`
-    await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
+      const itemId = await createApplication(itemData, token, preference)
+      await createApplicationUpdate(itemId, itemData, preference, allPropertiesSummary)
 
-    // 4. Upload all income verification documents
-    for (const { file, label } of allFiles) {
-      const buf = Buffer.from(await file.arrayBuffer())
-      const safeName = `${label}_${file.name}`.replace(/[^a-zA-Z0-9._-]/g, '_')
-      await uploadFileToMonday(itemId, buf, safeName, file.type || 'application/octet-stream')
+      // Re-generate PDF per item so it reflects the specific property
+      const pdfBuffer = generateApplicationPdf(itemData)
+      const rankSuffix = preference ? `_choice${preference.rank}` : ''
+      const pdfName = `Application_${data.firstName}_${data.lastName}_${dateStr}${rankSuffix}.pdf`
+      await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
+
+      // Upload all income verification documents to this item
+      for (const { buffer, name, type, label } of fileBuffers) {
+        const safeName = `${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_')
+        await uploadFileToMonday(itemId, buffer, safeName, type)
+      }
+
+      itemIds.push(itemId)
     }
 
-    // 5. Send emails (non-blocking — failures don't fail the submission)
-    const mondayItemUrl = `https://groundfloor-force.monday.com/boards/${640654033}/pulses/${itemId}`
+    // Send applicant + PM emails (failures don't fail the submission)
+    const primaryItemId = itemIds[0]
+    const mondayItemUrl = `https://groundfloor-force.monday.com/boards/${640654033}/pulses/${primaryItemId}`
     const config = await getConfig().catch(() => null)
+
+    const propertySummary = data.properties && data.properties.length > 1
+      ? `${data.properties.length} properties (${data.properties.map((p) => `${p.address}${p.unit ? ` Unit ${p.unit}` : ''}`).join('; ')})`
+      : data.property
+        ? `${data.property.address}${data.property.unit ? ` Unit ${data.property.unit}` : ''}`
+        : ''
 
     await Promise.allSettled([
       data.email
@@ -69,13 +111,13 @@ export async function POST(req: NextRequest) {
         ? sendNotificationEmail(
             config.notificationEmail,
             `${data.firstName} ${data.lastName}`,
-            data.property ? `${data.property.address}${data.property.unit ? ` Unit ${data.property.unit}` : ''}` : '',
+            propertySummary,
             mondayItemUrl
           )
         : Promise.resolve(),
     ])
 
-    return NextResponse.json({ success: true, itemId, token })
+    return NextResponse.json({ success: true, itemIds, token })
   } catch (error) {
     console.error('Submission error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'

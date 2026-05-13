@@ -48,7 +48,17 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
         <h3 className="section-title">Application Summary</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-          {property && (
+          {data.properties && data.properties.length > 1 ? (
+            <ReviewCard title={`Properties (${data.properties.length}) — in order of preference`}>
+              {data.properties.map((p, i) => (
+                <Row
+                  key={p.id}
+                  label={`${i + 1}. ${p.address}${p.unit ? ` Unit ${p.unit}` : ''}`}
+                  value={`${p.city}${p.rent > 0 ? ` · $${p.rent.toLocaleString()}/mo` : ''}`}
+                />
+              ))}
+            </ReviewCard>
+          ) : property && (
             <ReviewCard title="Property">
               <Row label="Address" value={`${property.address}${property.unit ? ` Unit ${property.unit}` : ''}`} />
               <Row label="City" value={property.city} />
@@ -101,6 +111,14 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
               <Row label="Relationship" value={occ.relationship} />
               <Row label="Employer" value={occ.employerName} />
               <Row label="Monthly Income" value={occ.monthlyGrossSalary ? `$${occ.monthlyGrossSalary}` : undefined} />
+              {occ.sameAsPrimary === false && (
+                <>
+                  <Row label="Own Address"
+                    value={[occ.currentAddress, occ.currentCity].filter(Boolean).join(', ') || '—'} />
+                  <Row label="Own Landlord"
+                    value={`${occ.prevLandlordFirstName || ''} ${occ.prevLandlordLastName || ''}`.trim() || '—'} />
+                </>
+              )}
             </ReviewCard>
           ))}
 

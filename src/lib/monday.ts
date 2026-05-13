@@ -187,10 +187,23 @@ export async function getApplicationByToken(token: string) {
   }
 }
 
-export async function createApplication(data: Omit<FormData, 'documents' | 'occupantDocs'>, token?: string): Promise<string> {
+export interface PreferenceRank {
+  rank: number  // 1-based
+  total: number
+}
+
+export async function createApplication(
+  data: Omit<FormData, 'documents' | 'occupantDocs'>,
+  token?: string,
+  preference?: PreferenceRank | null
+): Promise<string> {
   const { property, occupants = [] } = data
 
-  const itemName = [
+  const namePrefix = preference && preference.total > 1
+    ? `[${preference.rank}/${preference.total}] `
+    : ''
+
+  const itemName = (namePrefix + [
     data.firstName,
     data.lastName,
     '-',
@@ -198,8 +211,7 @@ export async function createApplication(data: Omit<FormData, 'documents' | 'occu
     property?.unit ? `Unit ${property.unit}` : '',
   ]
     .filter(Boolean)
-    .join(' ')
-    .trim()
+    .join(' ')).trim()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cv: Record<string, any> = {
@@ -285,12 +297,25 @@ export async function createApplication(data: Omit<FormData, 'documents' | 'occu
 
 export async function createApplicationUpdate(
   itemId: string,
-  data: Omit<FormData, 'documents' | 'occupantDocs'>
+  data: Omit<FormData, 'documents' | 'occupantDocs'>,
+  preference?: PreferenceRank | null,
+  allProperties?: { address: string; unit: string; city: string; rent: number }[]
 ): Promise<void> {
   const { property, occupants = [] } = data
 
+  const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th']
+  const rankLabel = preference && preference.total > 1
+    ? `<b>${ORDINAL[preference.rank - 1] ?? `${preference.rank}th`} choice (of ${preference.total})</b><br>`
+    : ''
+
   const lines: string[] = [
     '<h2>Rental Application — Full Details</h2>',
+    ...(rankLabel ? [rankLabel] : []),
+    ...(allProperties && allProperties.length > 1 ? [
+      '<b>Applicant also applied for:</b>',
+      ...allProperties.map((p, i) => `  ${i + 1}. ${p.address}${p.unit ? ` Unit ${p.unit}` : ''}, ${p.city}${p.rent > 0 ? ` ($${p.rent}/mo)` : ''}`),
+      '',
+    ] : []),
     '',
     '<b>Primary Applicant</b>',
     `Name: ${data.firstName} ${data.lastName}`,
@@ -353,8 +378,18 @@ export async function createApplicationUpdate(
         `  Employer Address: ${[occ.employerAddress, occ.employerCity, occ.employerProvince, occ.employerPostal].filter(Boolean).join(', ')}`,
         `  Employer Phone: ${occ.employerPhone || '—'}`,
         `  Employment Period: ${occ.employmentFrom || '—'} to ${occ.employmentTo || 'Current'}`,
-        `  Monthly Gross Salary: $${occ.monthlyGrossSalary || '—'}`
+        `  Monthly Gross Salary: $${occ.monthlyGrossSalary || '—'}`,
       )
+      if (occ.sameAsPrimary === false) {
+        lines.push(
+          `  Current Address: ${[occ.currentAddress, occ.currentAddressLine2, occ.currentCity, occ.currentProvince, occ.currentPostal].filter(Boolean).join(', ') || '—'}`,
+          `  Previous Landlord: ${[occ.prevLandlordFirstName, occ.prevLandlordLastName].filter(Boolean).join(' ') || '—'}`,
+          `  Landlord Phone: ${occ.prevLandlordPhone || '—'} | Email: ${occ.prevLandlordEmail || '—'}`,
+          `  Reason for Leaving: ${occ.prevReasonForLeaving || '—'}`,
+        )
+      } else {
+        lines.push(`  Address & Landlord: Same as primary applicant`)
+      }
     })
   }
 
