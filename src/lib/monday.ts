@@ -147,6 +147,24 @@ export async function getRecentApplications(limit = 500) {
   }).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) // newest first by created_at
 }
 
+// Fetch every Monday item that shares a token (one per property when
+// the applicant applied for multiple). Used by the co-signer return flow
+// so the addendum is attached to all items, not just the first.
+export async function getAllApplicationItemsByToken(token: string): Promise<string[]> {
+  const safe = token.replace(/[^a-zA-Z0-9-]/g, '')
+  const query = `
+    query {
+      items_by_column_values(
+        board_id: ${APPLICATIONS_BOARD_ID},
+        column_id: "text0",
+        column_value: "${safe}"
+      ) { id }
+    }
+  `
+  const data = await mondayQuery<{ items_by_column_values: { id: string }[] }>(query)
+  return data.items_by_column_values?.map((i) => i.id) ?? []
+}
+
 export async function getApplicationByToken(token: string) {
   // Sanitize token — only allow alphanumeric + hyphens
   const safe = token.replace(/[^a-zA-Z0-9-]/g, '')
@@ -399,6 +417,35 @@ export async function createApplicationUpdate(
 
   const body = lines.join('\n')
 
+  const mutation = `
+    mutation ($itemId: ID!, $body: String!) {
+      create_update(item_id: $itemId, body: $body) { id }
+    }
+  `
+  await mondayQuery(mutation, { itemId, body })
+}
+
+// Post a co-signer addendum update note to an existing application item.
+export async function createCosignerUpdate(
+  itemId: string,
+  cosigner: {
+    firstName: string
+    lastName: string
+    relationship: string
+    email: string
+    phone: string
+  }
+): Promise<void> {
+  const lines = [
+    '<h2>Co-signer Addendum</h2>',
+    `<i>Submitted: ${new Date().toLocaleString('en-CA')}</i>`,
+    '',
+    `<b>Co-signer Name:</b> ${cosigner.firstName} ${cosigner.lastName}`,
+    `<b>Relationship:</b> ${cosigner.relationship || '—'}`,
+    `<b>Email:</b> ${cosigner.email || '—'}`,
+    `<b>Phone:</b> ${cosigner.phone || '—'}`,
+  ]
+  const body = lines.join('\n')
   const mutation = `
     mutation ($itemId: ID!, $body: String!) {
       create_update(item_id: $itemId, body: $body) { id }

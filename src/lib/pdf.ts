@@ -181,6 +181,100 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
   return Buffer.from(arrayBuf)
 }
 
+// ── Co-signer addendum ───────────────────────────────────────────────────────
+
+export function generateCosignerAddendumPdf(input: {
+  applicantName: string
+  propertyLine: string
+  cosigner: {
+    firstName: string
+    lastName: string
+    relationship: string
+    email: string
+    phone: string
+  }
+}): Buffer {
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' })
+  const margin = 20
+  let y = 20
+
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(0, 90, 163)
+  doc.text('Co-signer Addendum', margin, y)
+  y += 7
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(100, 112, 141)
+  doc.text(
+    `Ground Floor Property Management — Submitted ${new Date().toLocaleString('en-CA')}`,
+    margin,
+    y
+  )
+  y += 10
+
+  function row(label: string, value: string) {
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(100, 112, 141)
+    doc.text(label, margin, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(17, 17, 17)
+    doc.text(value || '—', margin + 55, y)
+    y += 6
+  }
+
+  doc.setDrawColor(0, 90, 163)
+  doc.setLineWidth(0.5)
+  doc.line(margin, y, 200, y)
+  y += 7
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(0, 90, 163)
+  doc.text('Original Application', margin, y)
+  y += 7
+
+  row('Applicant', input.applicantName)
+  row('Property', input.propertyLine)
+  y += 4
+
+  doc.setDrawColor(0, 90, 163)
+  doc.setLineWidth(0.5)
+  doc.line(margin, y, 200, y)
+  y += 7
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(0, 90, 163)
+  doc.text('Co-signer Details', margin, y)
+  y += 7
+
+  const c = input.cosigner
+  row('Name', `${c.firstName} ${c.lastName}`.trim())
+  row('Relationship', c.relationship)
+  row('Email', c.email)
+  row('Phone', c.phone)
+  y += 8
+
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'italic')
+  doc.setTextColor(120, 120, 120)
+  doc.text(
+    'This addendum was submitted by the applicant via the rental application status page',
+    margin,
+    y
+  )
+  y += 4
+  doc.text(
+    'and is retained alongside the original application for record-keeping.',
+    margin,
+    y
+  )
+
+  const arrayBuf = doc.output('arraybuffer')
+  return Buffer.from(arrayBuf)
+}
+
 // ── Blank printable application ──────────────────────────────────────────────
 
 export function generateBlankApplicationPdf(): Buffer {
