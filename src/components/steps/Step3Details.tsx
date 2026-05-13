@@ -58,10 +58,10 @@ export default function Step3Details({ data, onChange, errors }: Props) {
             </FormField>
           </div>
           <FormField label="Monthly Rent ($)" required error={errors.monthlyRent}>
-            <input type="number" className="form-input" value={data.monthlyRent} onChange={f('monthlyRent')} placeholder="1500" />
+            <input type="number" className="form-input" value={data.monthlyRent} onChange={f('monthlyRent')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
           </FormField>
           <FormField label="Security Deposit ($)" required error={errors.securityDeposit}>
-            <input type="number" className="form-input" value={data.securityDeposit} onChange={f('securityDeposit')} placeholder="1500" />
+            <input type="number" className="form-input" value={data.securityDeposit} onChange={f('securityDeposit')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
           </FormField>
           <FormField label="Requested Move-In Date" required error={errors.moveInDate}
             hint="The date you are requesting to receive the keys">

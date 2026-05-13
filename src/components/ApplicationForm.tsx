@@ -291,6 +291,17 @@ export default function ApplicationForm({ config, autofill }: Props) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // Jump to a step from the progress bar — only allowed for completed (earlier) steps.
+  // ProgressBar emits bar-step numbers (1..7) which map to actual form steps 2..8.
+  const handleJumpToStep = (barStep: number) => {
+    const targetStep = barStep + 1
+    if (targetStep >= step) return
+    setErrors({})
+    setTouched(new Set())
+    setStep(targetStep)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleSubmit = async () => {
     const errs = validate(8, data)
     if (Object.keys(errs).length > 0) {
@@ -391,7 +402,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
       {/* ── Steps 2–8: form layout with progress bar + optional property sidebar ── */}
       {step > 1 && (
         <>
-          <ProgressBar current={step - 1} total={TOTAL_STEPS - 1} />
+          <ProgressBar current={step - 1} total={TOTAL_STEPS - 1} onJump={handleJumpToStep} />
 
           <div className="lg:flex lg:gap-8 lg:items-start">
             {/* Property sidebar — desktop only, sticks while scrolling */}

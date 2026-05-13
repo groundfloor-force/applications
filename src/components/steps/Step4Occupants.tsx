@@ -62,7 +62,7 @@ function OccupantForm({
           <input className="form-input" value={occ.occupation} onChange={f('occupation')} placeholder="e.g. Software Developer" />
         </FormField>
         <FormField label="Monthly Gross Salary ($)">
-          <input type="number" className="form-input" value={occ.monthlyGrossSalary} onChange={f('monthlyGrossSalary')} placeholder="3000" />
+          <input type="number" className="form-input" value={occ.monthlyGrossSalary} onChange={f('monthlyGrossSalary')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="3000" />
         </FormField>
       </div>
 

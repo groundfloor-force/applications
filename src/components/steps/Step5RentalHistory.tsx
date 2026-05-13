@@ -42,9 +42,13 @@ export default function Step5RentalHistory({ data, onChange, errors, onFieldBlur
         Accurate phone numbers and/or email address are required in order to process your application
         in a timely manner.
       </p>
-      <div className="bg-amber-50 border border-amber-200  p-3 text-sm text-amber-800 mb-6">
+      <div className="bg-amber-50 border border-amber-200  p-3 text-sm text-amber-800 mb-3">
         If this is your first rental, enter your parents&apos; or guardian&apos;s information and note
         &ldquo;First Rental&rdquo; in the Reason for Leaving field.
+      </div>
+      <div className="bg-amber-50 border border-amber-200  p-3 text-sm text-amber-800 mb-6">
+        If you are a homeowner, list yourself as the landlord and note &ldquo;Homeowner&rdquo; or
+        &ldquo;Sold Home&rdquo; in the Reason for Leaving field.
       </div>
 
       <div className="form-section">
@@ -74,7 +78,7 @@ export default function Step5RentalHistory({ data, onChange, errors, onFieldBlur
         <h3 className="section-title">Tenancy Details</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Previous Monthly Rent ($)">
-            <input type="number" className="form-input" value={data.prevMonthlyRent} onChange={f('prevMonthlyRent')} placeholder="1200" />
+            <input type="number" className="form-input" value={data.prevMonthlyRent} onChange={f('prevMonthlyRent')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1200" />
           </FormField>
           <div /> {/* spacer */}
           <FormField label="Rented From" hint="Month and year you moved in">

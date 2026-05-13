@@ -10,7 +10,15 @@ const STEP_LABELS = [
   'Review & Submit',
 ]
 
-export default function ProgressBar({ current, total }: { current: number; total: number }) {
+export default function ProgressBar({
+  current,
+  total,
+  onJump,
+}: {
+  current: number
+  total: number
+  onJump?: (step: number) => void
+}) {
   const pct = Math.round(((current - 1) / (total - 1)) * 100)
 
   return (
@@ -21,6 +29,28 @@ export default function ProgressBar({ current, total }: { current: number; total
           const stepNum = i + 1
           const isActive = stepNum === current
           const isComplete = stepNum < current
+          const canJump = isComplete && !!onJump
+
+          const circle = (
+            <div
+              className={`relative z-10 w-7 h-7 flex items-center justify-center text-xs transition-all duration-300 ${
+                isActive
+                  ? 'bg-primary-500 text-white ring-4 ring-primary-100'
+                  : isComplete
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white text-brand-gray border border-brand-border'
+              } ${canJump ? 'cursor-pointer hover:ring-4 hover:ring-primary-100' : ''}`}
+              style={{ fontWeight: 600 }}
+            >
+              {isComplete ? (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                stepNum
+              )}
+            </div>
+          )
 
           return (
             <div key={label} className="flex flex-col items-center flex-1 relative">
@@ -35,35 +65,41 @@ export default function ProgressBar({ current, total }: { current: number; total
                 </div>
               )}
 
-              {/* Circle */}
-              <div
-                className={`relative z-10 w-7 h-7 flex items-center justify-center text-xs transition-all duration-300 ${
-                  isActive
-                    ? 'bg-primary-500 text-white ring-4 ring-primary-100'
-                    : isComplete
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-white text-brand-gray border border-brand-border'
-                }`}
-                style={{ fontWeight: 600 }}
-              >
-                {isComplete ? (
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  stepNum
-                )}
-              </div>
+              {/* Circle (clickable if completed) */}
+              {canJump ? (
+                <button
+                  type="button"
+                  onClick={() => onJump?.(stepNum)}
+                  className="relative z-10 p-0 bg-transparent border-0"
+                  aria-label={`Go back to step ${stepNum}: ${label}`}
+                  title={`Edit ${label}`}
+                >
+                  {circle}
+                </button>
+              ) : (
+                circle
+              )}
 
               {/* Label — hidden on mobile */}
-              <span
-                className={`hidden sm:block text-center mt-2 text-xs leading-tight transition-colors duration-300 ${
-                  isActive ? 'text-primary-500' : isComplete ? 'text-primary-400' : 'text-brand-gray'
-                }`}
-                style={{ fontWeight: isActive ? 600 : 400 }}
-              >
-                {label}
-              </span>
+              {canJump ? (
+                <button
+                  type="button"
+                  onClick={() => onJump?.(stepNum)}
+                  className={`hidden sm:block text-center mt-2 text-xs leading-tight transition-colors duration-300 text-primary-400 hover:text-primary-600 hover:underline bg-transparent border-0 p-0 cursor-pointer`}
+                  style={{ fontWeight: 400 }}
+                >
+                  {label}
+                </button>
+              ) : (
+                <span
+                  className={`hidden sm:block text-center mt-2 text-xs leading-tight transition-colors duration-300 ${
+                    isActive ? 'text-primary-500' : 'text-brand-gray'
+                  }`}
+                  style={{ fontWeight: isActive ? 600 : 400 }}
+                >
+                  {label}
+                </span>
+              )}
             </div>
           )
         })}

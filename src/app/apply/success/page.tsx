@@ -61,14 +61,29 @@ export default async function SuccessPage({
             </div>
           )}
 
-          <div className="bg-white border border-brand-border p-5 text-sm text-brand-dark mb-8 text-left">
+          <div className="bg-white border border-brand-border p-5 text-sm text-brand-dark mb-6 text-left">
             <p className="mb-2" style={{ fontWeight: 600 }}>What happens next?</p>
             <ol className="space-y-1.5 list-decimal list-inside text-brand-gray">
               <li>Our team reviews your application (typically within 1-2 business days)</li>
               <li>We contact your previous landlord and references</li>
               <li>You will be notified of the decision by email or phone</li>
-              <li>If approved, you will receive your lease agreement to review and sign</li>
+              <li>
+                If approved, you will receive an approval email outlining next steps,
+                required documents, and lease signing instructions
+              </li>
             </ol>
+          </div>
+
+          <div className="bg-primary-50 border border-primary-200 p-5 text-sm text-brand-dark mb-8 text-left">
+            <p className="mb-2 text-primary-700" style={{ fontWeight: 600 }}>
+              If approved, be prepared to provide:
+            </p>
+            <ul className="space-y-1.5 list-disc list-inside text-primary-700">
+              <li>NB Power account setup (if applicable)</li>
+              <li>Proof of tenant insurance</li>
+              <li>Valid government-issued photo ID</li>
+              <li>Banking information for pre-authorized rent payments</li>
+            </ul>
           </div>
 
           <Link

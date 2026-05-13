@@ -222,11 +222,9 @@ export async function createApplication(data: Omit<FormData, 'documents' | 'occu
     date: { date: new Date().toISOString().split('T')[0] },
     ...(data.moveInDate && { date891: { date: data.moveInDate } }),
 
-    // Status
-    status1: { label: 'New' },
-
-    // Deposit/Fee → Pending Deposit
-    status70: { label: 'Pending Deposit' },
+    // Note: App Status (status1) and Deposit/Fee (status70 "Pending SD") are
+    // intentionally left blank on submission. PMs move applications into
+    // "Pending SD" manually once the approval email has been sent.
 
     // Viewing Status — set to "Viewing Complete" if they saw the unit
     ...((data.viewedUnit === 'Yes - In Person' || data.viewedUnit === 'Yes - Virtual Tour')
