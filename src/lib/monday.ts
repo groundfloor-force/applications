@@ -104,7 +104,7 @@ export async function getVacancies(): Promise<Property[]> {
 
 // ── Applications Board ────────────────────────────────────────────────────────
 
-export async function getRecentApplications(limit = 25) {
+export async function getRecentApplications(limit = 500) {
   const query = `
     query {
       boards(ids: [${APPLICATIONS_BOARD_ID}]) {
@@ -114,7 +114,7 @@ export async function getRecentApplications(limit = 25) {
             name
             created_at
             url
-            column_values(ids: ["status1", "rental_address", "unit__", "text1", "email", "date891"]) {
+            column_values(ids: ["status1", "rental_address", "unit__", "text1", "text2", "email", "phone6", "date891"]) {
               id text
             }
           }
@@ -139,10 +139,12 @@ export async function getRecentApplications(limit = 25) {
       address: t('rental_address'),
       unit: t('unit__'),
       firstName: t('text1'),
+      lastName: t('text2'),
       email: t('email'),
+      phone: t('phone6'),
       moveInDate: t('date891'),
     }
-  }).reverse() // newest first
+  }).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) // newest first by created_at
 }
 
 export async function getApplicationByToken(token: string) {

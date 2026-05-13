@@ -1,11 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { FormConfig } from '@/lib/types'
 
 interface AppRow {
   id: string; name: string; url: string; createdAt: string
-  status: string; address: string; unit: string; email: string; moveInDate: string
+  status: string; address: string; unit: string
+  firstName: string; lastName: string; email: string; phone: string
+  moveInDate: string
+}
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
+function startOfWeek(d: Date) {
+  const day = (d.getDay() + 6) % 7 // Monday = 0
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - day)
+  return start.getTime()
+}
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+}
+function startOfYear(d: Date) {
+  return new Date(d.getFullYear(), 0, 1).getTime()
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -79,6 +96,195 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   )
 }
 
+function MetricTile({ label, value, accent }: { label: string; value: number; accent: string }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <p className={`text-xs uppercase tracking-widest font-semibold ${accent}`}>{label}</p>
+      <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+    </div>
+  )
+}
+
+function ApplicationsBrowser({ apps, appsLoading }: { apps: AppRow[]; appsLoading: boolean }) {
+  const [query, setQuery] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  const metrics = useMemo(() => {
+    const now = new Date()
+    const day = startOfDay(now)
+    const week = startOfWeek(now)
+    const month = startOfMonth(now)
+    const year = startOfYear(now)
+    let d = 0, w = 0, m = 0, yr = 0
+    for (const a of apps) {
+      const ts = new Date(a.createdAt).getTime()
+      if (ts >= day) d++
+      if (ts >= week) w++
+      if (ts >= month) m++
+      if (ts >= year) yr++
+    }
+    return { day: d, week: w, month: m, year: yr, total: apps.length }
+  }, [apps])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const startTs = startDate ? new Date(startDate + 'T00:00:00').getTime() : null
+    const endTs = endDate ? new Date(endDate + 'T23:59:59').getTime() : null
+
+    return apps.filter((a) => {
+      if (q) {
+        const haystack = [
+          a.name, a.firstName, a.lastName, a.email, a.phone, a.address, a.unit,
+        ].join(' ').toLowerCase()
+        if (!haystack.includes(q)) return false
+      }
+      if (startTs || endTs) {
+        const ts = new Date(a.createdAt).getTime()
+        if (startTs && ts < startTs) return false
+        if (endTs && ts > endTs) return false
+      }
+      return true
+    })
+  }, [apps, query, startDate, endDate])
+
+  const fmtDate = (iso: string) => {
+    if (!iso) return '—'
+    try {
+      return new Date(iso).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' })
+    } catch {
+      return iso
+    }
+  }
+
+  const clearFilters = () => { setQuery(''); setStartDate(''); setEndDate('') }
+  const hasFilters = query || startDate || endDate
+
+  return (
+    <>
+      {/* Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <MetricTile label="Today" value={metrics.day} accent="text-primary-500" />
+        <MetricTile label="This Week" value={metrics.week} accent="text-primary-500" />
+        <MetricTile label="This Month" value={metrics.month} accent="text-primary-500" />
+        <MetricTile label="This Year" value={metrics.year} accent="text-primary-500" />
+      </div>
+
+      {/* Applications */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+          <h2 className="font-heading text-lg font-semibold text-primary-500">
+            Applications{' '}
+            <span className="text-xs font-normal text-gray-400">
+              ({filtered.length}{filtered.length !== metrics.total ? ` of ${metrics.total}` : ''})
+            </span>
+          </h2>
+          <a href="https://groundfloor-force.monday.com/boards/640654033" target="_blank" rel="noopener noreferrer"
+            className="text-xs text-primary-500 hover:underline">
+            Open in Monday ↗
+          </a>
+        </div>
+
+        {/* Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-3 mb-4">
+          <div>
+            <label className="text-xs text-gray-500 font-medium mb-1 block">Search</label>
+            <input
+              type="search"
+              className="form-input"
+              placeholder="Name, email, phone, or address..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium mb-1 block">From</label>
+            <input
+              type="date"
+              className="form-input"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium mb-1 block">To</label>
+            <input
+              type="date"
+              className="form-input"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={clearFilters}
+              disabled={!hasFilters}
+              className="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed px-3 py-2"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {appsLoading ? (
+          <p className="text-sm text-gray-400">Loading applications...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            {hasFilters ? 'No applications match the current filters.' : 'No applications found.'}
+          </p>
+        ) : (
+          <div className="overflow-x-auto -mx-2">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead>
+                <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+                  <th className="pb-2 px-2 font-medium">Submitted</th>
+                  <th className="pb-2 px-2 font-medium">Applicant</th>
+                  <th className="pb-2 px-2 font-medium">Property</th>
+                  <th className="pb-2 px-2 font-medium">Move-In</th>
+                  <th className="pb-2 px-2 font-medium">Status</th>
+                  <th className="pb-2 px-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((app) => (
+                  <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="py-2.5 px-2 text-gray-500 text-xs whitespace-nowrap">
+                      {fmtDate(app.createdAt)}
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <p className="font-medium text-gray-800">{app.name}</p>
+                      <p className="text-xs text-gray-400">{app.email}</p>
+                      {app.phone && <p className="text-xs text-gray-400">{app.phone}</p>}
+                    </td>
+                    <td className="py-2.5 px-2 text-gray-600">
+                      {app.address ? `${app.address}${app.unit ? ` #${app.unit}` : ''}` : '—'}
+                    </td>
+                    <td className="py-2.5 px-2 text-gray-500 text-xs">
+                      {app.moveInDate || '—'}
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[app.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {app.status || '—'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <a href={app.url} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-primary-500 hover:underline whitespace-nowrap">
+                        View ↗
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [config, setConfig] = useState<FormConfig | null>(null)
   const [saving, setSaving] = useState(false)
@@ -138,10 +344,19 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={config.logoUrl} alt="Ground Floor" className="h-10 object-contain" />
           <div className="flex items-center gap-3">
+            <a
+              href="/api/admin/blank-pdf"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-pill text-sm font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors border border-primary-200"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Blank PDF
+            </a>
             <a
               href="/apply?autofill=1"
               target="_blank"
@@ -168,7 +383,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="font-heading text-2xl font-semibold text-gray-900 mb-1">Admin Panel</h1>
           <p className="text-sm text-gray-500">
@@ -282,62 +497,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             />
           </div>
 
-          {/* Recent Applications */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
-              <h2 className="font-heading text-lg font-semibold text-primary-500">Recent Applications</h2>
-              <a href="https://groundfloor-force.monday.com/boards/640654033" target="_blank" rel="noopener noreferrer"
-                className="text-xs text-primary-500 hover:underline">
-                Open in Monday ↗
-              </a>
-            </div>
-            {appsLoading ? (
-              <p className="text-sm text-gray-400">Loading applications...</p>
-            ) : apps.length === 0 ? (
-              <p className="text-sm text-gray-400">No applications found.</p>
-            ) : (
-              <div className="overflow-x-auto -mx-2">
-                <table className="w-full text-sm min-w-[600px]">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                      <th className="pb-2 px-2 font-medium">Applicant</th>
-                      <th className="pb-2 px-2 font-medium">Property</th>
-                      <th className="pb-2 px-2 font-medium">Move-In</th>
-                      <th className="pb-2 px-2 font-medium">Status</th>
-                      <th className="pb-2 px-2 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {apps.map((app) => (
-                      <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                        <td className="py-2.5 px-2">
-                          <p className="font-medium text-gray-800">{app.name}</p>
-                          <p className="text-xs text-gray-400">{app.email}</p>
-                        </td>
-                        <td className="py-2.5 px-2 text-gray-600">
-                          {app.address ? `${app.address}${app.unit ? ` #${app.unit}` : ''}` : '—'}
-                        </td>
-                        <td className="py-2.5 px-2 text-gray-500 text-xs">
-                          {app.moveInDate || '—'}
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[app.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                            {app.status || 'New'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <a href={app.url} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-primary-500 hover:underline whitespace-nowrap">
-                            View ↗
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <ApplicationsBrowser apps={apps} appsLoading={appsLoading} />
 
           {/* Monday.com info */}
           <div className="bg-primary-50 rounded-xl border border-primary-100 p-6">

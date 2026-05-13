@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getRecentApplications } from '@/lib/monday'
 import { cookies } from 'next/headers'
+import { generateBlankApplicationPdf } from '@/lib/pdf'
 
 export async function GET(req: NextRequest) {
   void req
@@ -9,11 +9,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const apps = await getRecentApplications(500)
-    return NextResponse.json(apps)
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
-  }
+  const pdf = generateBlankApplicationPdf()
+  return new NextResponse(new Uint8Array(pdf), {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'attachment; filename="rental-application-blank.pdf"',
+    },
+  })
 }
