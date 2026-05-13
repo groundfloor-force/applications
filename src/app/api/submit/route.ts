@@ -3,7 +3,7 @@ import { createApplication, createApplicationUpdate, uploadFileToMonday } from '
 import { sendConfirmationEmail, sendNotificationEmail } from '@/lib/email'
 import { getConfig } from '@/lib/config'
 import { generateApplicationPdf } from '@/lib/pdf'
-import type { FormData, Property } from '@/lib/types'
+import type { FormData } from '@/lib/types'
 
 export const maxDuration = 60
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const data: Omit<FormData, 'documents' | 'occupantDocs'> = JSON.parse(raw)
 
-    // Collect uploaded files into reusable buffers (consumed once, used N times)
+    // Collect uploaded file buffers
     const fileBuffers: { buffer: Buffer; name: string; type: string; label: string }[] = []
     for (const [key, value] of multipart.entries()) {
       if (value instanceof File && value.size > 0) {
@@ -47,54 +47,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Resolve the list of properties to create items for.
-    // `properties` is the multi-select list; if empty, fall back to `property` (legacy / skipped).
-    const propertyList: (Property | null)[] = (data.properties && data.properties.length > 0)
-      ? data.properties
-      : [data.property]
-
     const token = crypto.randomUUID()
-    const allPropertiesSummary = propertyList
-      .filter((p): p is Property => p !== null)
-      .map((p) => ({ address: p.address, unit: p.unit, city: p.city, rent: p.rent }))
 
+    // Single Monday item per submission, even when multiple properties were
+    // selected. The full preference list is surfaced in the update note.
+    const itemId = await createApplication(data, token)
+    await createApplicationUpdate(itemId, data)
+
+    const pdfBuffer = generateApplicationPdf(data)
     const dateStr = new Date().toISOString().split('T')[0]
-    const itemIds: string[] = []
+    const pdfName = `Application_${data.firstName}_${data.lastName}_${dateStr}.pdf`
+    await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
 
-    // Create one Monday item per property, in preference order.
-    for (let i = 0; i < propertyList.length; i++) {
-      const prop = propertyList[i]
-      const itemData = {
-        ...data,
-        property: prop,
-        // Use this property's rent for the Monday rent column when available
-        monthlyRent: prop?.rent ? String(prop.rent) : data.monthlyRent,
-      }
-      const preference = propertyList.length > 1
-        ? { rank: i + 1, total: propertyList.length }
-        : null
-
-      const itemId = await createApplication(itemData, token, preference)
-      await createApplicationUpdate(itemId, itemData, preference, allPropertiesSummary)
-
-      // Re-generate PDF per item so it reflects the specific property
-      const pdfBuffer = generateApplicationPdf(itemData)
-      const rankSuffix = preference ? `_choice${preference.rank}` : ''
-      const pdfName = `Application_${data.firstName}_${data.lastName}_${dateStr}${rankSuffix}.pdf`
-      await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
-
-      // Upload all income verification documents to this item
-      for (const { buffer, name, type, label } of fileBuffers) {
-        const safeName = `${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_')
-        await uploadFileToMonday(itemId, buffer, safeName, type)
-      }
-
-      itemIds.push(itemId)
+    for (const { buffer, name, type, label } of fileBuffers) {
+      const safeName = `${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_')
+      await uploadFileToMonday(itemId, buffer, safeName, type)
     }
 
-    // Send applicant + PM emails (failures don't fail the submission)
-    const primaryItemId = itemIds[0]
-    const mondayItemUrl = `https://groundfloor-force.monday.com/boards/${640654033}/pulses/${primaryItemId}`
+    const mondayItemUrl = `https://groundfloor-force.monday.com/boards/${640654033}/pulses/${itemId}`
     const config = await getConfig().catch(() => null)
 
     const propertySummary = data.properties && data.properties.length > 1
@@ -117,7 +87,7 @@ export async function POST(req: NextRequest) {
         : Promise.resolve(),
     ])
 
-    return NextResponse.json({ success: true, itemIds, token })
+    return NextResponse.json({ success: true, itemId, token })
   } catch (error) {
     console.error('Submission error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'

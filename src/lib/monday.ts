@@ -205,31 +205,27 @@ export async function getApplicationByToken(token: string) {
   }
 }
 
-export interface PreferenceRank {
-  rank: number  // 1-based
-  total: number
-}
-
 export async function createApplication(
   data: Omit<FormData, 'documents' | 'occupantDocs'>,
   token?: string,
-  preference?: PreferenceRank | null
 ): Promise<string> {
-  const { property, occupants = [] } = data
+  const { property, occupants = [], properties = [] } = data
+  const multi = properties.length > 1
 
-  const namePrefix = preference && preference.total > 1
-    ? `[${preference.rank}/${preference.total}] `
-    : ''
-
-  const itemName = (namePrefix + [
-    data.firstName,
-    data.lastName,
-    '-',
-    property?.address ?? '',
-    property?.unit ? `Unit ${property.unit}` : '',
-  ]
-    .filter(Boolean)
-    .join(' ')).trim()
+  // Item name: "Firstname Lastname - Multiple Properties" when applying to
+  // multiple, otherwise the usual "Firstname Lastname - Address Unit X".
+  const itemName = multi
+    ? `${data.firstName} ${data.lastName} - Multiple Properties`.trim()
+    : [
+        data.firstName,
+        data.lastName,
+        '-',
+        property?.address ?? '',
+        property?.unit ? `Unit ${property.unit}` : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cv: Record<string, any> = {
@@ -316,24 +312,29 @@ export async function createApplication(
 export async function createApplicationUpdate(
   itemId: string,
   data: Omit<FormData, 'documents' | 'occupantDocs'>,
-  preference?: PreferenceRank | null,
-  allProperties?: { address: string; unit: string; city: string; rent: number }[]
 ): Promise<void> {
-  const { property, occupants = [] } = data
+  const { property, occupants = [], properties = [] } = data
+  const multi = properties.length > 1
 
   const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th']
-  const rankLabel = preference && preference.total > 1
-    ? `<b>${ORDINAL[preference.rank - 1] ?? `${preference.rank}th`} choice (of ${preference.total})</b><br>`
-    : ''
+
+  // When multi-property, surface the priority list at the very top of the
+  // update note so PMs see it before anything else.
+  const propertyBlock = multi
+    ? [
+        '<h2>Properties Applied For (in order of preference)</h2>',
+        ...properties.map((p, i) =>
+          `<b>${ORDINAL[i] ?? `${i + 1}th`} choice:</b> ${p.address}${p.unit ? ` Unit ${p.unit}` : ''}, ${p.city}${p.rent > 0 ? ` — $${p.rent.toLocaleString()}/mo` : ''}`
+        ),
+        '',
+        '<hr>',
+        '',
+      ]
+    : []
 
   const lines: string[] = [
+    ...propertyBlock,
     '<h2>Rental Application — Full Details</h2>',
-    ...(rankLabel ? [rankLabel] : []),
-    ...(allProperties && allProperties.length > 1 ? [
-      '<b>Applicant also applied for:</b>',
-      ...allProperties.map((p, i) => `  ${i + 1}. ${p.address}${p.unit ? ` Unit ${p.unit}` : ''}, ${p.city}${p.rent > 0 ? ` ($${p.rent}/mo)` : ''}`),
-      '',
-    ] : []),
     '',
     '<b>Primary Applicant</b>',
     `Name: ${data.firstName} ${data.lastName}`,
@@ -344,7 +345,7 @@ export async function createApplicationUpdate(
     `Children: ${data.children || 'None stated'}`,
     `Pets: ${data.pets || 'None stated'}`,
     '',
-    '<b>Property Applied For</b>',
+    multi ? '<b>Primary Property (1st choice)</b>' : '<b>Property Applied For</b>',
     `Address: ${property?.address ?? ''} ${property?.unit ? `Unit ${property.unit}` : ''}, ${property?.city ?? ''}`,
     `Leasing Agent: ${data.leasingAgent || 'N/A'}`,
     `Requested Monthly Rent: $${data.monthlyRent || property?.rent || '—'}`,

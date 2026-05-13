@@ -56,8 +56,20 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
   doc.text(`Ground Floor Property Management — Submitted ${new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, y)
   y += 12
 
-  // Property
-  if (property) {
+  // Property / Properties
+  const propsList = data.properties ?? []
+  const multi = propsList.length > 1
+  if (multi) {
+    heading('Properties Applied For (in order of preference)')
+    const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th']
+    propsList.forEach((p, i) => {
+      label(
+        `${ORDINAL[i] ?? `${i + 1}th`} choice`,
+        `${p.address}${p.unit ? `, Unit ${p.unit}` : ''}, ${p.city}${p.rent > 0 ? ` — $${p.rent.toLocaleString()}/mo` : ''}`
+      )
+    })
+    spacer()
+  } else if (property) {
     heading('Property')
     label('Address', `${property.address}${property.unit ? `, Unit ${property.unit}` : ''}`)
     label('City', property.city)
