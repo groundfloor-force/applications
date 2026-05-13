@@ -2,6 +2,7 @@
 
 import { FormData } from '@/lib/types'
 import FormField from '@/components/FormField'
+import { useT } from '@/lib/locale-context'
 
 interface Props {
   data: FormData
@@ -13,6 +14,7 @@ const MAX_MB = 50
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,.docx'
 
 export default function Step6Employment({ data, onChange, errors }: Props) {
+  const t = useT()
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     const valid: File[] = []
@@ -36,27 +38,25 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
   return (
     <div>
       <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
-        Employment & Income Verification
+        {t.step6.title}
       </h2>
       <p className="text-sm text-brand-gray mb-2">
-        Upload income verification for the primary applicant. Pay stubs, bank statements, or
-        employment letters are all accepted. You can upload multiple documents.
+        {t.step6.subtitle}
       </p>
       <div className="bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 mb-6">
         Accepted formats: PDF, JPG, PNG, DOCX — max {MAX_MB} MB per file
       </div>
 
       <div className="form-section">
-        <h3 className="section-title">Primary Applicant — Employer</h3>
+        <h3 className="section-title">{t.step8.primaryApplicant} — {t.step6.employer}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <FormField label="Employer Name" required error={errors.employerName}
-              hint="If unemployed or retired, please indicate here">
+            <FormField label={t.step6.employer} required error={errors.employerName}
+              hint={t.step6.employerHint}>
               <input
                 className="form-input"
                 value={data.employerName}
                 onChange={(e) => onChange({ employerName: e.target.value })}
-                placeholder="Company name or 'Unemployed' / 'Retired'"
               />
             </FormField>
           </div>
@@ -64,7 +64,7 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
       </div>
 
       <div className="form-section">
-        <h3 className="section-title">Income Verification — {data.firstName || 'Primary Applicant'}</h3>
+        <h3 className="section-title">{t.step6.incomeDocs} — {data.firstName || t.step8.primaryApplicant}</h3>
 
         {/* Uploaded files list */}
         {data.documents.length > 0 && (
@@ -83,7 +83,7 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
                   onClick={() => removeFile(i)}
                   className="text-xs text-secondary hover:underline flex-shrink-0"
                 >
-                  Remove
+                  {t.step6.remove}
                 </button>
               </div>
             ))}
@@ -97,7 +97,7 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
           </svg>
           <p className="text-sm text-brand-gray">
             <label className="cursor-pointer text-primary-500 hover:underline font-bold">
-              Click to upload files
+              {t.step6.incomeDocs}
               <input
                 type="file"
                 className="sr-only"
@@ -106,9 +106,8 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
                 onChange={handleFiles}
               />
             </label>
-            {' '}or drag and drop
           </p>
-          <p className="text-xs text-brand-gray mt-1">PDF, JPG, PNG, DOCX up to {MAX_MB} MB each</p>
+          <p className="text-xs text-brand-gray mt-1">PDF, JPG, PNG, DOCX — max {MAX_MB} MB</p>
         </div>
 
         {data.documents.length === 0 && (
@@ -122,9 +121,9 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
       {/* Occupant income verification */}
       {data.occupants.length > 0 && (
         <div className="form-section">
-          <h3 className="section-title">Income Verification — Additional Occupants</h3>
+          <h3 className="section-title">{t.step6.incomeDocs} — {t.step4.title}</h3>
           <p className="text-xs text-brand-gray mb-4">
-            Upload income verification for each additional adult applicant.
+            {t.step6.incomeDocsHint}
           </p>
           {data.occupants.map((occ, i) => (
             <OccupantUpload
@@ -156,6 +155,7 @@ function OccupantUpload({
   files: File[]
   onChange: (files: File[]) => void
 }) {
+  const t = useT()
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files ?? [])
     const valid = newFiles.filter((f) => {
@@ -182,7 +182,7 @@ function OccupantUpload({
               </svg>
               <span className="text-sm text-brand-dark truncate flex-1">{file.name}</span>
               <button type="button" onClick={() => onChange(files.filter((_, j) => j !== i))}
-                className="text-xs text-secondary hover:underline flex-shrink-0">Remove</button>
+                className="text-xs text-secondary hover:underline flex-shrink-0">{t.step6.remove}</button>
             </div>
           ))}
         </div>
@@ -192,7 +192,7 @@ function OccupantUpload({
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
-        Upload document{files.length > 0 ? 's' : ''}
+        {t.step6.addAnother}
         <input type="file" className="sr-only" accept={ACCEPT} multiple onChange={handleFiles} />
       </label>
     </div>

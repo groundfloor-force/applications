@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Property, FormData } from '@/lib/types'
+import { useT } from '@/lib/locale-context'
+import { tpl } from '@/lib/i18n'
 
 interface Props {
   data: FormData
@@ -24,11 +26,12 @@ function UnitRow({
   onClick: () => void
   onDetails: () => void
 }) {
+  const t = useT()
   const selected = selectedRank > 0
   const badges = [
     property.bedrooms,
     property.bathrooms,
-    property.available ? `Avail: ${property.available}` : '',
+    property.available ? `${t.step1.available}: ${property.available}` : '',
     property.parking,
     property.pets,
   ].filter(Boolean)
@@ -59,12 +62,12 @@ function UnitRow({
           </span>
           {property.rent > 0 && (
             <span className="text-primary-500 text-sm" style={{ fontWeight: 600 }}>
-              ${property.rent.toLocaleString()}/mo
+              ${property.rent.toLocaleString()}{t.step1.perMonth}
             </span>
           )}
           {property.status === 'COMING UP' && (
             <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 font-medium">
-              Coming Up
+              {t.step1.comingUp}
             </span>
           )}
         </div>
@@ -85,13 +88,14 @@ function UnitRow({
         onClick={(e) => { e.stopPropagation(); onDetails() }}
         className="flex-shrink-0 text-xs text-primary-400 hover:text-primary-600 hover:underline ml-1"
       >
-        Details
+        {t.step1.details}
       </button>
     </button>
   )
 }
 
 export default function Step1Property({ data, onChange, onNext }: Props) {
+  const t = useT()
   const [allProperties, setAllProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState('')
@@ -109,7 +113,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
         setLoading(false)
       })
       .catch(() => {
-        setFetchError('Could not load properties. You can still submit a blank application.')
+        setFetchError(t.step1.fetchError)
         setLoading(false)
       })
   }, [])
@@ -180,14 +184,13 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
   return (
     <div>
       <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
-        Property Search
+        {t.step1.title}
       </h2>
       <p className="text-sm text-brand-gray mb-2">
-        Type the address of the unit you are applying for. You can select multiple units in
-        order of preference — we will create one application per property.
+        {t.step1.subtitleMulti}
       </p>
       <p className="text-sm text-brand-gray mb-6">
-        If you don&apos;t know the address yet, you can proceed without selecting one.
+        {t.step1.subtitleSkip}
       </p>
 
       {/* Selected list */}
@@ -195,14 +198,17 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
         <div className="mb-5 border border-primary-200 bg-primary-50">
           <div className="px-4 py-2 border-b border-primary-200 flex items-center justify-between">
             <p className="text-xs text-primary-700 uppercase tracking-wide" style={{ fontWeight: 700 }}>
-              Selected — {properties.length} {properties.length === 1 ? 'property' : 'properties'} in order of preference
+              {tpl(t.step1.selectedHeading, {
+                n: properties.length,
+                label: properties.length === 1 ? t.step1.property : t.step1.properties,
+              })}
             </p>
             <button
               type="button"
               onClick={() => updateSelection([])}
               className="text-xs text-primary-600 hover:underline"
             >
-              Clear all
+              {t.step1.clearAll}
             </button>
           </div>
           <div className="p-2 space-y-1.5">
@@ -216,13 +222,13 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-brand-dark truncate" style={{ fontWeight: 600 }}>
-                    {p.address}{p.unit ? `, Unit ${p.unit}` : ''}
+                    {p.address}{p.unit ? `, ${p.unit}` : ''}
                     <span className="text-xs text-brand-gray ml-2 font-normal">
-                      {ORDINAL[i] ?? `${i + 1}th`} choice
+                      {ORDINAL[i] ?? `${i + 1}`} {t.step1.choice}
                     </span>
                   </p>
                   <p className="text-xs text-brand-gray">
-                    {p.city} {p.rent > 0 && `· $${p.rent.toLocaleString()}/mo`}
+                    {p.city} {p.rent > 0 && `· $${p.rent.toLocaleString()}${t.step1.perMonth}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -230,8 +236,8 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                     type="button"
                     onClick={() => moveProperty(i, -1)}
                     disabled={i === 0}
-                    aria-label="Move up"
-                    title="Move up"
+                    aria-label={t.step1.moveUp}
+                    title={t.step1.moveUp}
                     className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -242,8 +248,8 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                     type="button"
                     onClick={() => moveProperty(i, 1)}
                     disabled={i === properties.length - 1}
-                    aria-label="Move down"
-                    title="Move down"
+                    aria-label={t.step1.moveDown}
+                    title={t.step1.moveDown}
                     className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -253,8 +259,8 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                   <button
                     type="button"
                     onClick={() => toggleProperty(p)}
-                    aria-label="Remove"
-                    title="Remove"
+                    aria-label={t.step1.remove}
+                    title={t.step1.remove}
                     className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-secondary hover:bg-red-50 transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -267,7 +273,10 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
           </div>
           <div className="px-4 py-3 border-t border-primary-200">
             <button type="button" onClick={onNext} className="btn-primary w-full sm:w-auto">
-              Continue with {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+              {tpl(t.step1.continueWith, {
+                n: properties.length,
+                label: properties.length === 1 ? t.step1.property : t.step1.properties,
+              })}
               <svg className="w-4 h-4 ml-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>
@@ -293,7 +302,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
         <input
           type="text"
           className="form-input pl-9 text-base"
-          placeholder={properties.length > 0 ? 'Add another property...' : 'Type a street address or city...'}
+          placeholder={properties.length > 0 ? t.step1.addAnotherPlaceholder : t.step1.searchPlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoComplete="off"
@@ -344,11 +353,8 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
       {/* No results */}
       {noResults && (
         <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-4 text-sm text-amber-800">
-          <p className="font-medium mb-1">No available units found for &ldquo;{query}&rdquo;</p>
-          <p className="text-amber-700">
-            The address may not be in our system yet, or the unit may not currently be available.
-            You can still proceed and fill in the property details manually in the next step.
-          </p>
+          <p className="font-medium mb-1">{t.step1.noResults} &ldquo;{query}&rdquo;</p>
+          <p className="text-amber-700">{t.step1.noResultsHint}</p>
         </div>
       )}
 
@@ -379,11 +385,11 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
             <div className="p-5 overflow-y-auto">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h3 className="text-lg text-brand-dark leading-snug" style={{ fontWeight: 700 }}>
-                  {preview.address}{preview.unit ? `, Unit ${preview.unit}` : ''}
+                  {preview.address}{preview.unit ? `, ${preview.unit}` : ''}
                 </h3>
                 {preview.status === 'COMING UP' && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 flex-shrink-0" style={{ fontWeight: 600 }}>
-                    Coming Up
+                    {t.step1.comingUp}
                   </span>
                 )}
               </div>
@@ -391,20 +397,20 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
 
               {preview.rent > 0 && (
                 <p className="text-2xl text-primary-500 mb-4" style={{ fontWeight: 700 }}>
-                  ${preview.rent.toLocaleString()}<span className="text-sm text-brand-gray ml-1" style={{ fontWeight: 400 }}>/mo</span>
+                  ${preview.rent.toLocaleString()}<span className="text-sm text-brand-gray ml-1" style={{ fontWeight: 400 }}>{t.step1.perMonth}</span>
                 </p>
               )}
 
               <div className="grid grid-cols-2 gap-2 text-sm mb-5">
                 {[
-                  ['Bedrooms', preview.bedrooms],
-                  ['Bathrooms', preview.bathrooms],
-                  ['Available', preview.available],
-                  ['Parking', preview.parking],
-                  ['Laundry', preview.laundry],
-                  ['Pets', preview.pets],
-                  ['Balcony', preview.balcony && preview.balcony !== 'No' ? 'Yes' : null],
-                  ['Floor', preview.floor],
+                  [t.step1.bedrooms, preview.bedrooms],
+                  [t.step1.bathrooms, preview.bathrooms],
+                  [t.step1.available, preview.available],
+                  [t.step1.parking, preview.parking],
+                  [t.step1.laundry, preview.laundry],
+                  [t.step1.pets, preview.pets],
+                  [t.step1.balcony, preview.balcony && preview.balcony !== 'No' ? t.common.yes : null],
+                  [t.step1.floor, preview.floor],
                 ].filter(([, v]) => v).map(([label, val]) => (
                   <div key={label} className="bg-brand-bg px-3 py-2">
                     <p className="text-xs text-brand-gray mb-0.5">{label}</p>
@@ -424,7 +430,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                 className="btn-primary w-full justify-center"
                 disabled={properties.some((x) => x.id === preview.id)}
               >
-                {properties.some((x) => x.id === preview.id) ? 'Already Selected' : 'Add to Selection'}
+                {properties.some((x) => x.id === preview.id) ? t.step1.alreadySelected : t.step1.addToSelection}
               </button>
             </div>
           </div>
@@ -435,7 +441,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
       {properties.length === 0 && (
         <div className="mt-6 pt-5 border-t border-brand-border">
           <p className="text-sm text-brand-gray mb-3">
-            Don&apos;t see your unit listed, or don&apos;t know the address yet?
+            {t.step1.skipPrompt}
           </p>
           <button
             type="button"
@@ -449,10 +455,10 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
             </div>
             <div className="flex-1">
               <p className="text-sm text-brand-dark group-hover:text-primary-600 transition-colors" style={{ fontWeight: 600 }}>
-                Continue without selecting a property
+                {t.step1.skipTitle}
               </p>
               <p className="text-xs text-brand-gray group-hover:text-primary-400 transition-colors mt-0.5">
-                You&apos;ll enter the address manually on the next step
+                {t.step1.skipSub}
               </p>
             </div>
             <svg className="w-5 h-5 text-brand-border group-hover:text-primary-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

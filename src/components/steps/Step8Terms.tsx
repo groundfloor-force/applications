@@ -2,6 +2,8 @@
 
 import { FormData, FormConfig } from '@/lib/types'
 import FormField from '@/components/FormField'
+import { useT } from '@/lib/locale-context'
+import { tpl } from '@/lib/i18n'
 
 interface Props {
   data: FormData
@@ -32,90 +34,91 @@ function Row({ label, value }: { label: string; value?: string | number | null }
 }
 
 export default function Step8Terms({ data, onChange, errors, config, submitting, onSubmit }: Props) {
+  const t = useT()
   const { property, occupants = [] } = data
 
   return (
     <div>
       <h2 className="text-2xl text-brand-dark mb-1" style={{ fontWeight: 700 }}>
-        Review & Submit
+        {t.step8.title}
       </h2>
       <p className="text-sm text-brand-gray mb-6">
-        Review your application before submitting. Please read the terms carefully.
+        {t.step8.subtitle}
       </p>
 
       {/* Application review cards */}
       <div className="form-section">
-        <h3 className="section-title">Application Summary</h3>
+        <h3 className="section-title">{t.step8.summary}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
           {data.properties && data.properties.length > 1 ? (
-            <ReviewCard title={`Properties (${data.properties.length}) — in order of preference`}>
+            <ReviewCard title={tpl(t.step8.propertiesCard, { n: data.properties.length })}>
               {data.properties.map((p, i) => (
                 <Row
                   key={p.id}
-                  label={`${i + 1}. ${p.address}${p.unit ? ` Unit ${p.unit}` : ''}`}
-                  value={`${p.city}${p.rent > 0 ? ` · $${p.rent.toLocaleString()}/mo` : ''}`}
+                  label={`${i + 1}. ${p.address}${p.unit ? ` ${p.unit}` : ''}`}
+                  value={`${p.city}${p.rent > 0 ? ` · $${p.rent.toLocaleString()}${t.step1.perMonth}` : ''}`}
                 />
               ))}
             </ReviewCard>
           ) : property && (
-            <ReviewCard title="Property">
-              <Row label="Address" value={`${property.address}${property.unit ? ` Unit ${property.unit}` : ''}`} />
-              <Row label="City" value={property.city} />
-              <Row label="Bedrooms" value={property.bedrooms} />
-              <Row label="Rent" value={property.rent > 0 ? `$${property.rent.toLocaleString()}/mo` : undefined} />
+            <ReviewCard title={t.step8.propertyCard}>
+              <Row label={t.step8.rowAddress} value={`${property.address}${property.unit ? ` ${property.unit}` : ''}`} />
+              <Row label={t.step8.rowCity} value={property.city} />
+              <Row label={t.step8.rowBedrooms} value={property.bedrooms} />
+              <Row label={t.step8.rowRent} value={property.rent > 0 ? `$${property.rent.toLocaleString()}${t.step1.perMonth}` : undefined} />
             </ReviewCard>
           )}
 
-          <ReviewCard title="Primary Applicant">
-            <Row label="Name" value={`${data.firstName} ${data.lastName}`.trim() || '—'} />
-            <Row label="Email" value={data.email} />
-            <Row label="Phone" value={data.phone} />
-            <Row label="DOB" value={data.birthDate} />
+          <ReviewCard title={t.step8.primaryApplicant}>
+            <Row label={t.step8.rowName} value={`${data.firstName} ${data.lastName}`.trim() || '—'} />
+            <Row label={t.step8.rowEmail} value={data.email} />
+            <Row label={t.step8.rowPhone} value={data.phone} />
+            <Row label={t.step8.rowDob} value={data.birthDate} />
           </ReviewCard>
 
-          <ReviewCard title="Household">
-            <Row label="Move-In" value={data.moveInDate} />
-            <Row label="Monthly Rent" value={data.monthlyRent ? `$${data.monthlyRent}` : undefined} />
-            <Row label="Deposit" value={data.securityDeposit ? `$${data.securityDeposit}` : undefined} />
-            <Row label="Adults" value={data.numOccupants} />
-            <Row label="Vehicles" value={data.numVehicles} />
-            <Row label="Children" value={data.children} />
-            <Row label="Pets" value={data.pets} />
-            <Row label="Viewed Unit" value={data.viewedUnit} />
-            <Row label="Shown By" value={data.viewedByName} />
+          <ReviewCard title={t.step8.householdCard}>
+            <Row label={t.step8.rowMoveIn} value={data.moveInDate} />
+            <Row label={t.step8.rowMonthlyRent} value={data.monthlyRent ? `$${data.monthlyRent}` : undefined} />
+            <Row label={t.step8.rowDeposit} value={data.securityDeposit ? `$${data.securityDeposit}` : undefined} />
+            <Row label={t.step8.rowAdults} value={data.numOccupants} />
+            <Row label={t.step8.rowVehicles} value={data.numVehicles} />
+            <Row label={t.step8.rowChildren} value={data.children} />
+            <Row label={t.step8.rowPets} value={data.pets} />
+            <Row label={t.step8.rowViewedUnit} value={data.viewedUnit} />
+            <Row label={t.step8.rowShownBy} value={data.viewedByName} />
           </ReviewCard>
 
-          <ReviewCard title="Employment">
-            <Row label="Employer" value={data.employerName} />
-            <Row label="Documents" value={data.documents.length > 0 ? `${data.documents.length} file${data.documents.length > 1 ? 's' : ''} attached` : 'None attached'} />
+          <ReviewCard title={t.step8.employmentCard}>
+            <Row label={t.step8.rowEmployer} value={data.employerName} />
+            <Row label={t.step8.rowDocuments} value={data.documents.length > 0 ? `${data.documents.length} ${t.step8.filesAttached}` : t.step8.noneAttached} />
           </ReviewCard>
 
-          <ReviewCard title="Rental History">
-            <Row label="Previous Landlord"
+          <ReviewCard title={t.step8.rentalHistoryCard}>
+            <Row label={t.step8.rowPrevLandlord}
               value={`${data.prevLandlordFirstName} ${data.prevLandlordLastName}`.trim() || '—'} />
-            <Row label="Landlord Phone" value={data.prevLandlordPhone} />
-            <Row label="Prev. Rent" value={data.prevMonthlyRent ? `$${data.prevMonthlyRent}/mo` : undefined} />
-            <Row label="Reason for Leaving" value={data.reasonForLeaving} />
+            <Row label={t.step8.rowLandlordPhone} value={data.prevLandlordPhone} />
+            <Row label={t.step8.rowPrevRent} value={data.prevMonthlyRent ? `$${data.prevMonthlyRent}${t.step1.perMonth}` : undefined} />
+            <Row label={t.step8.rowReasonLeaving} value={data.reasonForLeaving} />
           </ReviewCard>
 
-          <ReviewCard title="Reference">
-            <Row label="Name" value={`${data.ref1FirstName} ${data.ref1LastName}`.trim() || '—'} />
-            <Row label="Phone" value={data.ref1Phone} />
-            <Row label="Email" value={data.ref1Email} />
+          <ReviewCard title={t.step8.referenceCard}>
+            <Row label={t.step8.rowName} value={`${data.ref1FirstName} ${data.ref1LastName}`.trim() || '—'} />
+            <Row label={t.step8.rowPhone} value={data.ref1Phone} />
+            <Row label={t.step8.rowEmail} value={data.ref1Email} />
           </ReviewCard>
 
           {occupants.map((occ, i) => (
-            <ReviewCard key={i} title={`Occupant ${i + 2}`}>
-              <Row label="Name" value={`${occ.firstName} ${occ.lastName}`.trim()} />
-              <Row label="Relationship" value={occ.relationship} />
-              <Row label="Employer" value={occ.employerName} />
-              <Row label="Monthly Income" value={occ.monthlyGrossSalary ? `$${occ.monthlyGrossSalary}` : undefined} />
+            <ReviewCard key={i} title={tpl(t.step8.occupantCard, { n: i + 2 })}>
+              <Row label={t.step8.rowName} value={`${occ.firstName} ${occ.lastName}`.trim()} />
+              <Row label={t.step8.rowRelationship} value={occ.relationship} />
+              <Row label={t.step8.rowEmployer} value={occ.employerName} />
+              <Row label={t.step8.rowMonthlyIncome} value={occ.monthlyGrossSalary ? `$${occ.monthlyGrossSalary}` : undefined} />
               {occ.sameAsPrimary === false && (
                 <>
-                  <Row label="Own Address"
+                  <Row label={t.step8.rowOwnAddress}
                     value={[occ.currentAddress, occ.currentCity].filter(Boolean).join(', ') || '—'} />
-                  <Row label="Own Landlord"
+                  <Row label={t.step8.rowOwnLandlord}
                     value={`${occ.prevLandlordFirstName || ''} ${occ.prevLandlordLastName || ''}`.trim() || '—'} />
                 </>
               )}
@@ -123,10 +126,10 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
           ))}
 
           {data.cosignerFirstName && (
-            <ReviewCard title="Co-signer">
-              <Row label="Name" value={`${data.cosignerFirstName} ${data.cosignerLastName}`.trim()} />
-              <Row label="Relationship" value={data.cosignerRelationship} />
-              <Row label="Email" value={data.cosignerEmail} />
+            <ReviewCard title={t.step8.cosignerCard}>
+              <Row label={t.step8.rowName} value={`${data.cosignerFirstName} ${data.cosignerLastName}`.trim()} />
+              <Row label={t.step8.rowRelationship} value={data.cosignerRelationship} />
+              <Row label={t.step8.rowEmail} value={data.cosignerEmail} />
             </ReviewCard>
           )}
 
@@ -135,20 +138,20 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
 
       {/* Additional details */}
       <div className="form-section">
-        <h3 className="section-title">Additional Information</h3>
-        <FormField label="Is there anything else you would like to share?">
+        <h3 className="section-title">{t.step8.additionalInfo}</h3>
+        <FormField label={t.step8.additionalInfoLabel}>
           <textarea
             className="form-input min-h-[100px]"
             value={data.additionalDetails}
             onChange={(e) => onChange({ additionalDetails: e.target.value })}
-            placeholder="Optional — any context that may help your application..."
+            placeholder={t.step8.additionalInfoPlaceholder}
           />
         </FormField>
       </div>
 
       {/* Terms */}
       <div className="form-section">
-        <h3 className="section-title">Terms & Conditions</h3>
+        <h3 className="section-title">{t.step8.termsTitle}</h3>
         <div className="bg-brand-bg border border-brand-border  p-4 max-h-64 overflow-y-auto text-sm text-brand leading-relaxed whitespace-pre-wrap mb-4 terms-scroll">
           {config.termsText}
         </div>
@@ -161,8 +164,7 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
             onChange={(e) => onChange({ termsAgreed: e.target.checked })}
           />
           <span className="text-sm text-brand group-hover:text-brand-dark">
-            I have read and agree to the terms and conditions above. I declare that all information
-            provided in this application is true and correct.
+            {t.step8.termsAgree}
             <span className="required">*</span>
           </span>
         </label>
@@ -184,11 +186,11 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
               </svg>
-              Submitting...
+              {t.common.submitting}
             </>
           ) : (
             <>
-              Submit Application
+              {t.step8.submitApplication}
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>

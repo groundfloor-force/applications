@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { FormData, FormConfig } from '@/lib/types'
 import { initialFormData } from '@/lib/types'
+import { useT, useLocale } from '@/lib/locale-context'
 import ProgressBar from './ProgressBar'
 import StepDocuments from './StepDocuments'
 import IdleWarning from './IdleWarning'
@@ -19,55 +20,57 @@ import { saveFormToStorage, loadFormFromStorage, clearFormFromStorage, formatSav
 
 const TOTAL_STEPS = 8
 
-function validate(step: number, data: FormData): Record<string, string> {
+type ValidationMessages = ReturnType<typeof useT>['validation']
+
+function validate(step: number, data: FormData, v: ValidationMessages): Record<string, string> {
   const e: Record<string, string> = {}
 
   if (step === 2) {
-    if (!data.firstName.trim()) e.firstName = 'First name is required.'
-    if (!data.lastName.trim()) e.lastName = 'Last name is required.'
-    if (!data.email.trim()) e.email = 'Email is required.'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) e.email = 'Enter a valid email address.'
-    if (!data.phone.trim()) e.phone = 'Phone number is required.'
-    if (!data.currentAddress.trim()) e.currentAddress = 'Street address is required.'
-    if (!data.currentCity.trim()) e.currentCity = 'City is required.'
-    if (!data.children.trim()) e.children = 'Please enter number of children (or "None").'
-    if (!data.viewedUnit) e.viewedUnit = 'Please indicate if you have seen the unit.'
+    if (!data.firstName.trim()) e.firstName = v.firstNameRequired
+    if (!data.lastName.trim()) e.lastName = v.lastNameRequired
+    if (!data.email.trim()) e.email = v.emailRequired
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) e.email = v.emailInvalid
+    if (!data.phone.trim()) e.phone = v.phoneRequired
+    if (!data.currentAddress.trim()) e.currentAddress = v.streetRequired
+    if (!data.currentCity.trim()) e.currentCity = v.cityRequired
+    if (!data.children.trim()) e.children = v.childrenRequired
+    if (!data.viewedUnit) e.viewedUnit = v.viewedRequired
   }
 
   if (step === 3) {
-    if (!data.leasingAgent.trim()) e.leasingAgent = 'Please enter the leasing agent name or N/A.'
-    if (!data.monthlyRent) e.monthlyRent = 'Monthly rent is required.'
-    if (!data.securityDeposit) e.securityDeposit = 'Security deposit is required.'
-    if (!data.moveInDate) e.moveInDate = 'Move-in date is required.'
-    if (!data.numVehicles.trim()) e.numVehicles = 'Please enter number of vehicles (0 if none).'
+    if (!data.leasingAgent.trim()) e.leasingAgent = v.leasingAgentRequired
+    if (!data.monthlyRent) e.monthlyRent = v.monthlyRentRequired
+    if (!data.securityDeposit) e.securityDeposit = v.securityDepositRequired
+    if (!data.moveInDate) e.moveInDate = v.moveInRequired
+    if (!data.numVehicles.trim()) e.numVehicles = v.numVehiclesRequired
   }
 
   if (step === 4) {
     data.occupants.forEach((occ, i) => {
-      if (!occ.firstName.trim()) e[`occ${i}_firstName`] = 'First name is required.'
-      if (!occ.lastName.trim()) e[`occ${i}_lastName`] = 'Last name is required.'
-      if (!occ.email.trim()) e[`occ${i}_email`] = 'Email is required.'
-      if (!occ.phone.trim()) e[`occ${i}_phone`] = 'Phone is required.'
-      if (!occ.occupation.trim()) e[`occ${i}_occupation`] = 'Occupation is required.'
-      if (!occ.employerName.trim()) e[`occ${i}_employerName`] = 'Employer name is required.'
-      if (!occ.employerAddress.trim()) e[`occ${i}_employerAddress`] = 'Employer address is required.'
+      if (!occ.firstName.trim()) e[`occ${i}_firstName`] = v.firstNameRequired
+      if (!occ.lastName.trim()) e[`occ${i}_lastName`] = v.lastNameRequired
+      if (!occ.email.trim()) e[`occ${i}_email`] = v.emailRequired
+      if (!occ.phone.trim()) e[`occ${i}_phone`] = v.phoneRequired
+      if (!occ.occupation.trim()) e[`occ${i}_occupation`] = v.occupationRequired
+      if (!occ.employerName.trim()) e[`occ${i}_employerName`] = v.employerNameRequired
+      if (!occ.employerAddress.trim()) e[`occ${i}_employerAddress`] = v.employerAddressRequired
     })
   }
 
   if (step === 5) {
-    if (!data.prevLandlordFirstName.trim()) e.prevLandlordFirstName = 'First name is required.'
-    if (!data.prevLandlordLastName.trim()) e.prevLandlordLastName = 'Last name is required.'
-    if (!data.prevLandlordPhone.trim()) e.prevLandlordPhone = 'Phone is required.'
-    if (!data.prevLandlordEmail.trim()) e.prevLandlordEmail = 'Email is required.'
-    if (!data.reasonForLeaving.trim()) e.reasonForLeaving = 'Please provide a reason for leaving.'
+    if (!data.prevLandlordFirstName.trim()) e.prevLandlordFirstName = v.prevLandlordFirstRequired
+    if (!data.prevLandlordLastName.trim()) e.prevLandlordLastName = v.prevLandlordLastRequired
+    if (!data.prevLandlordPhone.trim()) e.prevLandlordPhone = v.prevLandlordPhoneRequired
+    if (!data.prevLandlordEmail.trim()) e.prevLandlordEmail = v.prevLandlordEmailRequired
+    if (!data.reasonForLeaving.trim()) e.reasonForLeaving = v.reasonForLeavingRequired
   }
 
   if (step === 6) {
-    if (!data.employerName.trim()) e.employerName = 'Employer name is required.'
+    if (!data.employerName.trim()) e.employerName = v.employerNameRequired
   }
 
   if (step === 8) {
-    if (!data.termsAgreed) e.termsAgreed = 'You must agree to the terms and conditions.'
+    if (!data.termsAgreed) e.termsAgreed = v.termsRequired
   }
 
   return e
@@ -230,6 +233,8 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
 
 export default function ApplicationForm({ config, autofill }: Props) {
   const router = useRouter()
+  const t = useT()
+  const locale = useLocale()
   const [step, setStep] = useState(autofill ? 2 : 0)
   const [data, setData] = useState<FormData>(autofill ? { ...TEST_DATA, documents: [], occupantDocs: [] } : initialFormData)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -296,7 +301,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
   )
 
   const handleNext = () => {
-    const errs = validate(step, data)
+    const errs = validate(step, data, t.validation)
     if (Object.keys(errs).length > 0) {
       // Mark all error fields as touched so they all show
       setTouched((prev) => new Set([...prev, ...Object.keys(errs)]))
@@ -329,7 +334,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
   }
 
   const handleSubmit = async () => {
-    const errs = validate(8, data)
+    const errs = validate(8, data, t.validation)
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       return
@@ -363,7 +368,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
       if (!res.ok) throw new Error(result.error || 'Submission failed')
 
       clearFormFromStorage()
-      router.push(`/apply/success?token=${result.token ?? ''}`)
+      router.push(`/apply/success?token=${result.token ?? ''}&lang=${locale}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.'
       setErrors({ submit: message })
@@ -401,17 +406,17 @@ export default function ApplicationForm({ config, autofill }: Props) {
       {savedBanner && step === 0 && (
         <div className="mb-6 bg-amber-50 border border-amber-200 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 animate-fade-up">
           <div className="flex-1">
-            <p className="text-sm text-amber-800" style={{ fontWeight: 600 }}>You have a saved application</p>
+            <p className="text-sm text-amber-800" style={{ fontWeight: 600 }}>{t.resume.title}</p>
             <p className="text-xs text-amber-600">
-              Last saved {formatSavedAt(savedBanner.savedAt)} — would you like to continue where you left off?
+              {t.resume.lastSavedPrefix} {formatSavedAt(savedBanner.savedAt)}{t.resume.lastSavedSuffix}
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button onClick={handleResumeYes} className="px-4 py-1.5 bg-amber-500 text-white text-sm hover:bg-amber-600 transition-all" style={{ fontWeight: 600 }}>
-              Resume
+              {t.resume.resume}
             </button>
             <button onClick={handleResumeFresh} className="px-4 py-1.5 border border-amber-300 text-amber-700 text-sm hover:bg-amber-100 transition-all" style={{ fontWeight: 600 }}>
-              Start fresh
+              {t.resume.startFresh}
             </button>
           </div>
         </div>
@@ -458,7 +463,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
                   {/* Details */}
                   <div className="p-4">
                     <p className="text-xs text-primary-500 uppercase tracking-widest mb-1" style={{ fontWeight: 600 }}>
-                      Applying for {data.properties.length > 1 && `(${data.properties.length})`}
+                      {data.properties.length > 1 ? `${t.step8.propertyCard} (${data.properties.length})` : t.step8.propertyCard}
                     </p>
                     {data.properties.length > 1 ? (
                       <div className="space-y-2 mb-3">
@@ -510,7 +515,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
                 {data.properties.length > 1 ? (
                   <div className="p-3">
                     <p className="text-xs text-primary-500 uppercase tracking-widest mb-2" style={{ fontWeight: 600 }}>
-                      Applying for {data.properties.length} properties
+                      {t.step8.propertyCard} ({data.properties.length})
                     </p>
                     <div className="space-y-1.5">
                       {data.properties.map((p, i) => (
@@ -545,7 +550,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
                       )}
                     </div>
                     <div className="flex-1 p-3 min-w-0">
-                      <p className="text-xs text-primary-500 uppercase tracking-widest mb-0.5" style={{ fontWeight: 600 }}>Applying for</p>
+                      <p className="text-xs text-primary-500 uppercase tracking-widest mb-0.5" style={{ fontWeight: 600 }}>{t.step8.propertyCard}</p>
                       <p className="text-brand-dark text-sm leading-snug" style={{ fontWeight: 600 }}>
                         {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''} — {data.property.city}
                       </p>
@@ -585,12 +590,12 @@ export default function ApplicationForm({ config, autofill }: Props) {
                   disabled={step <= 1}
                   className="btn-secondary disabled:opacity-30"
                 >
-                  Back
+                  {t.common.back}
                 </button>
 
                 {step < TOTAL_STEPS && (
                   <button type="button" onClick={handleNext} className="btn-primary">
-                    Continue
+                    {t.common.continue}
                     <svg className="w-4 h-4 ml-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                     </svg>

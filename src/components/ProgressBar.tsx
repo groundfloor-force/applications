@@ -1,14 +1,7 @@
 'use client'
 
-const STEP_LABELS = [
-  'Your Details',
-  'Household',
-  'Occupants',
-  'Rental History',
-  'Employment',
-  'References',
-  'Review & Submit',
-]
+import { useT } from '@/lib/locale-context'
+import { tpl } from '@/lib/i18n'
 
 export default function ProgressBar({
   current,
@@ -19,6 +12,16 @@ export default function ProgressBar({
   total: number
   onJump?: (step: number) => void
 }) {
+  const t = useT()
+  const STEP_LABELS = [
+    t.progress.yourDetails,
+    t.progress.household,
+    t.progress.occupants,
+    t.progress.rentalHistory,
+    t.progress.employment,
+    t.progress.references,
+    t.progress.reviewSubmit,
+  ]
   const pct = Math.round(((current - 1) / (total - 1)) * 100)
 
   return (
@@ -109,7 +112,7 @@ export default function ProgressBar({
       <div className="sm:hidden">
         <div className="flex justify-between items-baseline mb-2">
           <span className="text-sm text-primary-500" style={{ fontWeight: 600 }}>
-            Step {current} of {total}
+            {tpl(t.progress.stepOf, { n: current, total })}
             <span className="text-brand-gray ml-1" style={{ fontWeight: 400 }}>
               — {STEP_LABELS[current - 1]}
             </span>

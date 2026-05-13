@@ -1,5 +1,7 @@
 'use client'
 
+import { useT } from '@/lib/locale-context'
+
 interface Props {
   onBegin: () => void
 }
@@ -52,19 +54,20 @@ function IconCosigner({ className }: { className?: string }) {
   )
 }
 
-const REQUIRED = [
-  { Icon: IconId, label: 'Government-issued photo ID', detail: 'Driver\'s licence, passport, or provincial ID' },
-  { Icon: IconIncome, label: 'Proof of income / pay stub', detail: 'Most recent pay stub or bank statement (last 30 days)' },
-  { Icon: IconLandlord, label: 'Previous landlord contact info', detail: 'Phone number and/or email address' },
-]
-
-const OPTIONAL = [
-  { Icon: IconLetter, label: 'Employment letter', detail: 'Helpful if recently hired or self-employed' },
-  { Icon: IconReference, label: 'Personal reference', detail: 'Non-family contact who can speak to your character' },
-  { Icon: IconCosigner, label: 'Co-signer details', detail: 'Only if specifically requested by our team' },
-]
-
 export default function StepDocuments({ onBegin }: Props) {
+  const t = useT()
+  const REQUIRED = [
+    { Icon: IconId, label: t.documents.photoId, detail: t.documents.photoIdDetail },
+    { Icon: IconIncome, label: t.documents.income, detail: t.documents.incomeDetail },
+    { Icon: IconLandlord, label: t.documents.landlordContact, detail: t.documents.landlordContactDetail },
+  ]
+
+  const OPTIONAL = [
+    { Icon: IconLetter, label: t.documents.employmentLetter, detail: t.documents.employmentLetterDetail },
+    { Icon: IconReference, label: t.documents.personalReference, detail: t.documents.personalReferenceDetail },
+    { Icon: IconCosigner, label: t.documents.cosignerDetails, detail: t.documents.cosignerDetailsDetail },
+  ]
+
   return (
     <div className="animate-fade-up">
       {/* Desktop: side-by-side layout. Mobile: stacked */}
@@ -79,23 +82,23 @@ export default function StepDocuments({ onBegin }: Props) {
             </svg>
           </div>
           <h2 className="text-3xl text-brand-dark mb-3">
-            Before You Begin
+            {t.documents.beforeYouBegin}
           </h2>
           <p className="text-brand-gray text-sm mb-6">
-            Having these documents ready will make the process much faster. The whole form takes about 10 minutes.
+            {t.documents.intro}
           </p>
           <button
             type="button"
             onClick={onBegin}
             className="btn-primary gap-3 px-10 text-base"
           >
-            Start Application
+            {t.documents.startApplication}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
           </button>
           <p className="text-xs text-brand-gray mt-4">
-            Your progress is saved automatically as you go
+            {t.documents.autoSave}
           </p>
         </div>
 
@@ -103,7 +106,7 @@ export default function StepDocuments({ onBegin }: Props) {
         <div className="lg:w-3/5">
           <div className="bg-white border border-brand-border p-6 mb-4">
             <h3 className="text-sm uppercase tracking-widest text-primary-500 mb-5" style={{ fontWeight: 600 }}>
-              Required Documents
+              {t.documents.requiredDocuments}
             </h3>
             <div className="space-y-4">
               {REQUIRED.map((item) => (
@@ -127,7 +130,7 @@ export default function StepDocuments({ onBegin }: Props) {
 
           <div className="bg-white border border-brand-border p-6">
             <h3 className="text-sm uppercase tracking-widest text-brand-gray mb-5" style={{ fontWeight: 600 }}>
-              Nice to Have
+              {t.documents.niceToHave}
             </h3>
             <div className="space-y-4">
               {OPTIONAL.map((item) => (

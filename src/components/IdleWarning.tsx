@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '@/lib/locale-context'
 
 interface Props {
   onClear: () => void
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function IdleWarning({ onClear, warnAfterMin = 20, clearAfterMin = 5 }: Props) {
+  const t = useT()
   const [visible, setVisible] = useState(false)
   const [countdown, setCountdown] = useState(clearAfterMin * 60)
   const warnTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -94,10 +96,10 @@ export default function IdleWarning({ onClear, warnAfterMin = 20, clearAfterMin 
         </div>
 
         <h2 className="text-xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
-          Still there?
+          {t.idle.stillThere}
         </h2>
         <p className="text-sm text-brand-gray mb-2">
-          Your session has been idle for a while. For your security, this form will be cleared in:
+          {t.idle.sessionIdle}
         </p>
 
         <div className="text-3xl text-amber-500 mb-6 tabular-nums" style={{ fontWeight: 700 }}>
@@ -110,14 +112,14 @@ export default function IdleWarning({ onClear, warnAfterMin = 20, clearAfterMin 
             onClick={handleStillHere}
             className="btn-primary w-full justify-center"
           >
-            I&apos;m still here — continue
+            {t.idle.imStillHere}
           </button>
           <button
             type="button"
             onClick={handleRestart}
             className="w-full py-2 text-sm text-brand-gray hover:text-brand-gray transition-colors"
           >
-            Clear form and start over
+            {t.idle.clearAndRestart}
           </button>
         </div>
       </div>
