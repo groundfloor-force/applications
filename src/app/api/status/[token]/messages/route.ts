@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   getApplicationByToken,
   getAllApplicationItemsByToken,
-  createApplicantMessage,
+  postApplicantMessage,
   getApplicantConversation,
 } from '@/lib/monday'
 
@@ -64,12 +64,10 @@ export async function POST(
       return NextResponse.json({ error: 'Application not found.' }, { status: 404 })
     }
 
-    // Extract applicant name from the item name
-    // (item name is "Firstname Lastname - Property")
     const applicantName = app.name.split(' - ')[0]?.trim()
 
     for (const itemId of itemIds) {
-      await createApplicantMessage(itemId, message, locale, applicantName)
+      await postApplicantMessage(itemId, message, locale, applicantName)
     }
 
     const conversation = await getApplicantConversation(itemIds[0])

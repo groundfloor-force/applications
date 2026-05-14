@@ -17,25 +17,19 @@ interface AppData {
   mondayUrl: string
 }
 
-interface Reply {
+interface ConversationEntry {
   id: string
   body: string
   createdAt: string
+  fromApplicant: boolean
   author: string
-}
-
-interface ConversationMessage {
-  id: string
-  body: string
-  createdAt: string
-  replies: Reply[]
 }
 
 interface Props {
   locale: Locale
   token: string
   initialApp: AppData
-  initialConversation: ConversationMessage[]
+  initialConversation: ConversationEntry[]
 }
 
 type StatusStyle = { bg: string; text: string; dot: string }
@@ -197,8 +191,8 @@ function MessagesPanel({
 }: {
   token: string
   locale: Locale
-  conversation: ConversationMessage[]
-  setConversation: React.Dispatch<React.SetStateAction<ConversationMessage[]>>
+  conversation: ConversationEntry[]
+  setConversation: React.Dispatch<React.SetStateAction<ConversationEntry[]>>
   refreshing: boolean
 }) {
   const t = useT()
@@ -207,7 +201,6 @@ function MessagesPanel({
   const [error, setError] = useState('')
   const scrollerRef = useRef<HTMLDivElement | null>(null)
 
-  // Keep the latest message in view whenever the conversation grows
   useEffect(() => {
     const el = scrollerRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -222,11 +215,12 @@ function MessagesPanel({
 
     // Optimistic: show the applicant's message immediately
     const tempId = `pending-${Date.now()}`
-    const optimistic: ConversationMessage = {
+    const optimistic: ConversationEntry = {
       id: tempId,
       body: text,
       createdAt: new Date().toISOString(),
-      replies: [],
+      fromApplicant: true,
+      author: 'You',
     }
     setConversation((prev) => [...prev, optimistic])
     setMessage('')
@@ -240,22 +234,18 @@ function MessagesPanel({
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || t.status.messagesSendError)
 
-      // Replace the optimistic entry with the authoritative conversation
-      // from the server. If Monday hasn't indexed the message yet, keep
-      // the optimistic one so the user still sees what they sent.
-      const serverConv: ConversationMessage[] = json.conversation ?? []
+      // Merge: drop the optimistic entry, then take the server's authoritative
+      // list. If the server is missing the just-sent message (Monday API lag),
+      // keep the optimistic one so the user still sees what they sent.
+      const serverConv: ConversationEntry[] = json.conversation ?? []
       setConversation((prev) => {
-        if (serverConv.length >= prev.filter((m) => !m.id.startsWith('pending-')).length + 1) {
+        const withoutOptimistic = prev.filter((m) => m.id !== tempId)
+        if (serverConv.length > withoutOptimistic.length) {
           return serverConv
         }
-        return prev.map((m) =>
-          m.id === tempId
-            ? { ...m, id: `local-${Date.now()}` }  // promote to a stable local id
-            : m
-        )
+        return [...serverConv, { ...optimistic, id: `local-${Date.now()}` }]
       })
     } catch (err) {
-      // Roll back optimistic entry on failure
       setConversation((prev) => prev.filter((m) => m.id !== tempId))
       setMessage(text)
       const msg = err instanceof Error ? err.message : t.status.messagesSendError
@@ -290,39 +280,35 @@ function MessagesPanel({
       </div>
 
       {/* Conversation */}
-      <div ref={scrollerRef} className="flex-1 px-5 py-4 space-y-4 overflow-y-auto" style={{ minHeight: 320, maxHeight: 540 }}>
+      <div ref={scrollerRef} className="flex-1 px-5 py-4 space-y-3 overflow-y-auto" style={{ minHeight: 320, maxHeight: 540 }}>
         {conversation.length === 0 ? (
           <p className="text-sm text-brand-gray text-center py-12">{t.status.messagesEmpty}</p>
         ) : (
-          conversation.map((msg) => (
-            <div key={msg.id} className="space-y-3">
-              {/* Applicant message bubble */}
-              <div className="flex justify-end">
+          conversation.map((entry) =>
+            entry.fromApplicant ? (
+              <div key={entry.id} className="flex justify-end">
                 <div className="max-w-[85%]">
                   <div className="bg-primary-500 text-white px-4 py-2.5 text-sm leading-snug whitespace-pre-wrap">
-                    {msg.body}
+                    {entry.body}
                   </div>
                   <p className="text-[10px] text-brand-gray text-right mt-1">
-                    {t.status.messagesYou} · {formatTime(msg.createdAt, locale)}
+                    {t.status.messagesYou} · {formatTime(entry.createdAt, locale)}
                   </p>
                 </div>
               </div>
-
-              {/* Staff replies */}
-              {msg.replies.map((r) => (
-                <div key={r.id} className="flex justify-start">
-                  <div className="max-w-[85%]">
-                    <div className="bg-brand-bg text-brand-dark px-4 py-2.5 text-sm leading-snug whitespace-pre-wrap border border-brand-border">
-                      {r.body}
-                    </div>
-                    <p className="text-[10px] text-brand-gray mt-1">
-                      {r.author || t.status.messagesStaff} · {formatTime(r.createdAt, locale)}
-                    </p>
+            ) : (
+              <div key={entry.id} className="flex justify-start">
+                <div className="max-w-[85%]">
+                  <div className="bg-brand-bg text-brand-dark px-4 py-2.5 text-sm leading-snug whitespace-pre-wrap border border-brand-border">
+                    {entry.body}
                   </div>
+                  <p className="text-[10px] text-brand-gray mt-1">
+                    {entry.author || t.status.messagesStaff} · {formatTime(entry.createdAt, locale)}
+                  </p>
                 </div>
-              ))}
-            </div>
-          ))
+              </div>
+            )
+          )
         )}
       </div>
 
@@ -359,7 +345,7 @@ function MessagesPanel({
 function StatusInner({ locale, token, initialApp, initialConversation }: Props) {
   const t = useT()
   const [app, setApp] = useState<AppData>(initialApp)
-  const [conversation, setConversation] = useState<ConversationMessage[]>(initialConversation)
+  const [conversation, setConversation] = useState<ConversationEntry[]>(initialConversation)
   const [lastChecked, setLastChecked] = useState<number>(Date.now())
   const [showCosignerForm, setShowCosignerForm] = useState(false)
   const [cosignerSubmitted, setCosignerSubmitted] = useState(false)

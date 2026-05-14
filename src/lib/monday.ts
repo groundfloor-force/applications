@@ -436,9 +436,10 @@ export async function createApplicationUpdate(
   await mondayQuery(mutation, { itemId, body })
 }
 
-// Marker we use to identify updates that came from the applicant status page
-// (vs. internal staff notes on the item).
-const APPLICANT_MSG_MARKER = '<!-- gfpm-applicant-msg -->'
+// Plain-text marker used to identify the applicant conversation update and
+// the applicant's individual replies. Lives in both `body` (HTML) and
+// `text_body` (stripped) so it survives any HTML rewriting Monday may do.
+const APPLICANT_MSG_MARKER = '[Applicant Message]'
 const KAYLA_USER_ID = 24655178
 
 function escapeHtml(s: string): string {
@@ -450,27 +451,78 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
-// Post a message from the applicant to the Monday item, tagging Kayla.
-export async function createApplicantMessage(
+function stripMarkerFromText(s: string): string {
+  return s.replace(APPLICANT_MSG_MARKER, '').trim()
+}
+
+export interface ConversationEntry {
+  id: string
+  body: string
+  createdAt: string
+  fromApplicant: boolean
+  author: string
+}
+
+// Find the root applicant-conversation update on an item (if any).
+async function findConversationUpdateId(itemId: string): Promise<string | null> {
+  const query = `
+    query ($itemId: ID!) {
+      items(ids: [$itemId]) {
+        updates(limit: 100) {
+          id body text_body
+        }
+      }
+    }
+  `
+  type RawUpdate = { id: string; body: string; text_body: string }
+  const data = await mondayQuery<{ items: { updates: RawUpdate[] }[] }>(query, { itemId })
+  const updates = data.items?.[0]?.updates ?? []
+  const root = updates.find((u) =>
+    (u.text_body || '').includes(APPLICANT_MSG_MARKER) ||
+    (u.body || '').includes(APPLICANT_MSG_MARKER)
+  )
+  return root?.id ?? null
+}
+
+// Public entry point: send an applicant message. Creates the conversation
+// update on first message; replies to the existing update afterwards so
+// everything lives in one Monday thread.
+export async function postApplicantMessage(
   itemId: string,
   messageText: string,
   locale: 'en' | 'fr' = 'en',
   applicantName?: string,
-): Promise<void> {
+): Promise<{ updateId: string; isReply: boolean }> {
   const safe = escapeHtml(messageText).replace(/\n/g, '<br>')
-  const heading = locale === 'fr'
-    ? 'Message du demandeur via la page d’état'
-    : 'Message from applicant via status page'
+  const existing = await findConversationUpdateId(itemId)
 
-  // Monday's create_update body accepts HTML. To trigger an @-mention
-  // notification, the mention must be an <a class="cdx-mention"> tag
-  // with data-mention-type and data-mention-id attributes — this is the
-  // same markup Monday's UI generates when you type @ in the editor.
+  if (existing) {
+    // Reply on the existing conversation update
+    const body = [
+      `<p>${APPLICANT_MSG_MARKER}</p>`,
+      `<p>${safe}</p>`,
+    ].join('\n')
+    const mutation = `
+      mutation ($parentId: ID!, $body: String!) {
+        create_update(parent_id: $parentId, body: $body) { id }
+      }
+    `
+    const result = await mondayQuery<{ create_update: { id: string } }>(mutation, {
+      parentId: existing,
+      body,
+    })
+    return { updateId: result.create_update.id, isReply: true }
+  }
+
+  // First message: create the root update, tag Kayla so she gets notified
+  const heading = locale === 'fr'
+    ? 'Conversation avec le demandeur — page d’état'
+    : 'Applicant conversation — via status page'
+
   const mention = `<a class="cdx-mention" data-mention-type="User" data-mention-id="${KAYLA_USER_ID}" href="/users/${KAYLA_USER_ID}">@Kayla Richard</a>`
 
   const body = [
-    APPLICANT_MSG_MARKER,
-    `<p><b>${heading}${applicantName ? ` — ${escapeHtml(applicantName)}` : ''}</b></p>`,
+    `<p><b>${APPLICANT_MSG_MARKER} ${heading}${applicantName ? ` — ${escapeHtml(applicantName)}` : ''}</b></p>`,
     `<p>${safe}</p>`,
     `<p>cc ${mention}</p>`,
   ].join('\n')
@@ -480,27 +532,14 @@ export async function createApplicantMessage(
       create_update(item_id: $itemId, body: $body) { id }
     }
   `
-  await mondayQuery(mutation, { itemId, body })
+  const result = await mondayQuery<{ create_update: { id: string } }>(mutation, { itemId, body })
+  return { updateId: result.create_update.id, isReply: false }
 }
 
-export interface ConversationReply {
-  id: string
-  body: string
-  createdAt: string
-  author: string
-}
-
-export interface ConversationMessage {
-  id: string
-  body: string
-  createdAt: string
-  replies: ConversationReply[]
-}
-
-// Fetch all applicant-message updates on the item, plus replies (which are
-// the staff responses). Excludes internal staff updates on the item that
-// don't carry our marker.
-export async function getApplicantConversation(itemId: string): Promise<ConversationMessage[]> {
+// Fetch the conversation for an item as a flat list of entries, oldest first.
+// Includes the root update (applicant's first message) and every reply
+// (subsequent applicant messages + staff replies).
+export async function getApplicantConversation(itemId: string): Promise<ConversationEntry[]> {
   const query = `
     query ($itemId: ID!) {
       items(ids: [$itemId]) {
@@ -524,23 +563,50 @@ export async function getApplicantConversation(itemId: string): Promise<Conversa
   const data = await mondayQuery<{ items: { updates: RawUpdate[] }[] }>(query, { itemId })
   const updates = data.items?.[0]?.updates ?? []
 
-  return updates
-    .filter((u) => u.body.includes(APPLICANT_MSG_MARKER))
-    .map((u) => ({
-      id: u.id,
-      body: u.text_body || '',
-      createdAt: u.created_at,
-      replies: (u.replies ?? [])
-        .filter((r) => !r.body.includes(APPLICANT_MSG_MARKER))
-        .map((r) => ({
-          id: r.id,
-          body: r.text_body || '',
-          createdAt: r.created_at,
-          author: r.creator?.name || 'Staff',
-        }))
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-    }))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const root = updates.find((u) =>
+    (u.text_body || '').includes(APPLICANT_MSG_MARKER) ||
+    (u.body || '').includes(APPLICANT_MSG_MARKER)
+  )
+  if (!root) return []
+
+  const rootText = stripMarkerFromText(root.text_body || '')
+    // Remove the heading line and "cc @Kayla Richard" trailing line so
+    // the bubble shows only the applicant's actual first message
+    .split('\n')
+    .filter((line) => {
+      const trimmed = line.trim()
+      if (!trimmed) return false
+      if (/^cc\s+@/i.test(trimmed)) return false
+      if (/applicant conversation/i.test(trimmed)) return false
+      if (/conversation avec le demandeur/i.test(trimmed)) return false
+      return true
+    })
+    .join('\n')
+    .trim()
+
+  const entries: ConversationEntry[] = [
+    {
+      id: root.id,
+      body: rootText,
+      createdAt: root.created_at,
+      fromApplicant: true,
+      author: 'You',
+    },
+    ...((root.replies ?? []).map((r) => {
+      const text = r.text_body || ''
+      const fromApplicant =
+        text.includes(APPLICANT_MSG_MARKER) || (r.body || '').includes(APPLICANT_MSG_MARKER)
+      return {
+        id: r.id,
+        body: fromApplicant ? stripMarkerFromText(text) : text,
+        createdAt: r.created_at,
+        fromApplicant,
+        author: fromApplicant ? 'You' : r.creator?.name || 'Staff',
+      }
+    })),
+  ]
+
+  return entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
 // Post a co-signer addendum update note to an existing application item.
