@@ -121,6 +121,7 @@ export interface FormConfig {
   companyName: string
   logoUrl: string
   termsText: string
+  termsTextFr: string
   notificationEmail: string
   closedMessage: string
 }

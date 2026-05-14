@@ -2,7 +2,7 @@
 
 import { FormData, FormConfig } from '@/lib/types'
 import FormField from '@/components/FormField'
-import { useT } from '@/lib/locale-context'
+import { useT, useLocale } from '@/lib/locale-context'
 import { tpl } from '@/lib/i18n'
 
 interface Props {
@@ -35,7 +35,11 @@ function Row({ label, value }: { label: string; value?: string | number | null }
 
 export default function Step8Terms({ data, onChange, errors, config, submitting, onSubmit }: Props) {
   const t = useT()
+  const locale = useLocale()
   const { property, occupants = [] } = data
+  const termsText = locale === 'fr'
+    ? (config.termsTextFr?.trim() || config.termsText)
+    : config.termsText
 
   return (
     <div>
@@ -153,7 +157,7 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
       <div className="form-section">
         <h3 className="section-title">{t.step8.termsTitle}</h3>
         <div className="bg-brand-bg border border-brand-border  p-4 max-h-64 overflow-y-auto text-sm text-brand leading-relaxed whitespace-pre-wrap mb-4 terms-scroll">
-          {config.termsText}
+          {termsText}
         </div>
 
         <label className="flex items-start gap-3 cursor-pointer group">

@@ -490,11 +490,27 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             <h2 className="font-heading text-lg font-semibold text-primary-500 mb-4 pb-2 border-b border-gray-100">
               Terms & Conditions Text
             </h2>
-            <textarea
-              className="form-input min-h-[240px] font-mono text-xs"
-              value={config.termsText}
-              onChange={(e) => setConfig({ ...config, termsText: e.target.value })}
-            />
+            <div className="mb-5">
+              <label className="form-label">English</label>
+              <textarea
+                className="form-input min-h-[240px] font-mono text-xs"
+                value={config.termsText}
+                onChange={(e) => setConfig({ ...config, termsText: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                French (Français)
+                <span className="font-normal text-gray-400 ml-2 text-xs">
+                  Shown to applicants on /apply/fr — leave blank to fall back to English
+                </span>
+              </label>
+              <textarea
+                className="form-input min-h-[240px] font-mono text-xs"
+                value={config.termsTextFr ?? ''}
+                onChange={(e) => setConfig({ ...config, termsTextFr: e.target.value })}
+              />
+            </div>
           </div>
 
           <ApplicationsBrowser apps={apps} appsLoading={appsLoading} />

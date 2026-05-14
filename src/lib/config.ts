@@ -18,6 +18,13 @@ I understand that this is a routine application to establish credit, character, 
 If a deposit has been given and the applicant is declined for any reason, the total amount without interest will be returned. Should I not sign the lease or accept occupancy after the lease has been approved by the Landlord, the full deposit will be retained as liquidated damages.
 
 Should your application be approved, please be advised that Ground Floor Property Management will not provide any keys until the damage deposit and first month's rent are paid in full.`,
+  termsTextFr: `Tous nos locataires (à quelques exceptions près) sont automatiquement inscrits à notre Programme d'avantages pour locataires. Les éléments suivants sont inclus dans le programme : assurance locataire couvrant 20 000 $ de vos biens personnels et 1 000 000 $ de responsabilité civile; portail résident en ligne pour signaler les réparations et communications; ligne d'assistance pour l'entretien et les réparations 24/7/365; pardon de chèque sans provision (NSF) unique gratuit (valeur de 50 $); remplacement de clé unique gratuit (valeur de 80 $).
+
+Je comprends qu'il s'agit d'une demande de routine visant à vérifier ma solvabilité, mon caractère, mon emploi et mon historique de location. Je comprends également qu'il ne s'agit PAS d'une entente de location et que toutes les demandes doivent être approuvées. J'autorise la vérification des références fournies. Je déclare que les renseignements ci-dessus sont vrais et exacts, et j'accepte que le propriétaire puisse résilier toute entente conclue sur la foi de toute fausse déclaration faite ci-dessus.
+
+Si un dépôt a été versé et que la demande est refusée pour quelque raison que ce soit, le montant total sera remboursé sans intérêts. Si je ne signe pas le bail ou ne prends pas possession des lieux après que le propriétaire a approuvé le bail, la totalité du dépôt sera retenue à titre de dommages-intérêts.
+
+Si votre demande est approuvée, veuillez noter que Ground Floor Property Management ne remettra aucune clé tant que le dépôt de garantie et le premier mois de loyer n'auront pas été payés en totalité.`,
 }
 
 let cache: FormConfig | null = null
