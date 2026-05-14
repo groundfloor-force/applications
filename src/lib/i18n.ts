@@ -371,6 +371,16 @@ const en = {
     cosignerRelationshipPlaceholder: 'e.g. Parent, Sibling',
     cosignerEmail: 'Email',
     cosignerPhone: 'Phone',
+    messagesTitle: 'Messages with our team',
+    messagesIntro: 'Have a question or want to send an update about your application? Send us a message — our team will reply here.',
+    messagesEmpty: 'No messages yet. Start a conversation below.',
+    messagesPlaceholder: 'Type your message...',
+    messagesSend: 'Send message',
+    messagesSending: 'Sending...',
+    messagesYou: 'You',
+    messagesStaff: 'Ground Floor team',
+    messagesSendError: 'Could not send message. Please try again.',
+    messagesCharCount: '{n} / 2000',
   },
 }
 
@@ -744,6 +754,16 @@ const fr: Translations = {
     cosignerRelationshipPlaceholder: 'ex. Parent, frère/sœur',
     cosignerEmail: 'Courriel',
     cosignerPhone: 'Téléphone',
+    messagesTitle: 'Messages avec notre équipe',
+    messagesIntro: 'Une question ou une mise à jour à nous envoyer concernant votre demande? Envoyez-nous un message — notre équipe répondra ici.',
+    messagesEmpty: 'Aucun message pour l’instant. Démarrez une conversation ci-dessous.',
+    messagesPlaceholder: 'Tapez votre message...',
+    messagesSend: 'Envoyer le message',
+    messagesSending: 'Envoi en cours...',
+    messagesYou: 'Vous',
+    messagesStaff: 'Équipe Ground Floor',
+    messagesSendError: 'Impossible d’envoyer le message. Veuillez réessayer.',
+    messagesCharCount: '{n} / 2000',
   },
 }
 

@@ -436,6 +436,107 @@ export async function createApplicationUpdate(
   await mondayQuery(mutation, { itemId, body })
 }
 
+// Marker we use to identify updates that came from the applicant status page
+// (vs. internal staff notes on the item).
+const APPLICANT_MSG_MARKER = '<!-- gfpm-applicant-msg -->'
+const KAYLA_USER_ID = 24655178
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// Post a message from the applicant to the Monday item, tagging Kayla.
+export async function createApplicantMessage(
+  itemId: string,
+  messageText: string,
+  locale: 'en' | 'fr' = 'en',
+  applicantName?: string,
+): Promise<void> {
+  const safe = escapeHtml(messageText).replace(/\n/g, '<br>')
+  const heading = locale === 'fr'
+    ? 'Message du demandeur via la page d’état'
+    : 'Message from applicant via status page'
+
+  const body = [
+    APPLICANT_MSG_MARKER,
+    `<p><b>${heading}${applicantName ? ` — ${escapeHtml(applicantName)}` : ''}</b></p>`,
+    `<p>${safe}</p>`,
+    `<p>cc <span data-mention-type="User" data-mention-id="${KAYLA_USER_ID}">@Kayla Richard</span></p>`,
+  ].join('\n')
+
+  const mutation = `
+    mutation ($itemId: ID!, $body: String!) {
+      create_update(item_id: $itemId, body: $body) { id }
+    }
+  `
+  await mondayQuery(mutation, { itemId, body })
+}
+
+export interface ConversationReply {
+  id: string
+  body: string
+  createdAt: string
+  author: string
+}
+
+export interface ConversationMessage {
+  id: string
+  body: string
+  createdAt: string
+  replies: ConversationReply[]
+}
+
+// Fetch all applicant-message updates on the item, plus replies (which are
+// the staff responses). Excludes internal staff updates on the item that
+// don't carry our marker.
+export async function getApplicantConversation(itemId: string): Promise<ConversationMessage[]> {
+  const query = `
+    query ($itemId: ID!) {
+      items(ids: [$itemId]) {
+        updates(limit: 100) {
+          id body text_body created_at
+          creator { id name }
+          replies {
+            id body text_body created_at
+            creator { id name }
+          }
+        }
+      }
+    }
+  `
+  type RawReply = {
+    id: string; body: string; text_body: string; created_at: string
+    creator?: { id: string; name: string } | null
+  }
+  type RawUpdate = RawReply & { replies?: RawReply[] }
+
+  const data = await mondayQuery<{ items: { updates: RawUpdate[] }[] }>(query, { itemId })
+  const updates = data.items?.[0]?.updates ?? []
+
+  return updates
+    .filter((u) => u.body.includes(APPLICANT_MSG_MARKER))
+    .map((u) => ({
+      id: u.id,
+      body: u.text_body || '',
+      createdAt: u.created_at,
+      replies: (u.replies ?? [])
+        .filter((r) => !r.body.includes(APPLICANT_MSG_MARKER))
+        .map((r) => ({
+          id: r.id,
+          body: r.text_body || '',
+          createdAt: r.created_at,
+          author: r.creator?.name || 'Staff',
+        }))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+}
+
 // Post a co-signer addendum update note to an existing application item.
 export async function createCosignerUpdate(
   itemId: string,
