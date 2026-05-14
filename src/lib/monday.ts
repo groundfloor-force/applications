@@ -496,11 +496,17 @@ export async function postApplicantMessage(
   const safe = escapeHtml(messageText).replace(/\n/g, '<br>')
   const existing = await findConversationUpdateId(itemId)
 
+  // Tag Kayla on every message — Monday only triggers a notification when
+  // an @-mention is present in the specific update/reply body, so the
+  // mention must be included in every reply as well as the root update.
+  const mention = `<a class="cdx-mention" data-mention-type="User" data-mention-id="${KAYLA_USER_ID}" href="/users/${KAYLA_USER_ID}">@Kayla Richard</a>`
+
   if (existing) {
-    // Reply on the existing conversation update
+    // Reply on the existing conversation update — keep tagging Kayla
     const body = [
       `<p>${APPLICANT_MSG_MARKER}</p>`,
       `<p>${safe}</p>`,
+      `<p>cc ${mention}</p>`,
     ].join('\n')
     const mutation = `
       mutation ($parentId: ID!, $body: String!) {
@@ -514,12 +520,10 @@ export async function postApplicantMessage(
     return { updateId: result.create_update.id, isReply: true }
   }
 
-  // First message: create the root update, tag Kayla so she gets notified
+  // First message: create the root update
   const heading = locale === 'fr'
     ? 'Conversation avec le demandeur — page d’état'
     : 'Applicant conversation — via status page'
-
-  const mention = `<a class="cdx-mention" data-mention-type="User" data-mention-id="${KAYLA_USER_ID}" href="/users/${KAYLA_USER_ID}">@Kayla Richard</a>`
 
   const body = [
     `<p><b>${APPLICANT_MSG_MARKER} ${heading}${applicantName ? ` — ${escapeHtml(applicantName)}` : ''}</b></p>`,
@@ -596,9 +600,18 @@ export async function getApplicantConversation(itemId: string): Promise<Conversa
       const text = r.text_body || ''
       const fromApplicant =
         text.includes(APPLICANT_MSG_MARKER) || (r.body || '').includes(APPLICANT_MSG_MARKER)
+      // For applicant replies, drop the trailing "cc @Kayla Richard" line and
+      // the marker itself so the chat bubble shows only the user's text.
+      const cleanedBody = fromApplicant
+        ? stripMarkerFromText(text)
+            .split('\n')
+            .filter((line) => !/^cc\s+@/i.test(line.trim()))
+            .join('\n')
+            .trim()
+        : text
       return {
         id: r.id,
-        body: fromApplicant ? stripMarkerFromText(text) : text,
+        body: cleanedBody,
         createdAt: r.created_at,
         fromApplicant,
         author: fromApplicant ? 'You' : r.creator?.name || 'Staff',
