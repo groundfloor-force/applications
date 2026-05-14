@@ -376,17 +376,19 @@ function StatusInner({ locale, token, initialApp, initialConversation }: Props) 
   })()
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-6">
+    <>
+      {/* Applicant header — sits above the 2-column grid so both columns
+          start aligned at the status card / messages panel. */}
+      <div className="mb-6">
+        <p className="text-xs uppercase tracking-widest text-brand-gray mb-1" style={{ fontWeight: 600 }}>
+          {t.status.title}
+        </p>
+        <h1 className="text-3xl text-brand-dark" style={{ fontWeight: 700 }}>{app.name}</h1>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-6">
       {/* LEFT — status hero + details + cosigner */}
       <div className="space-y-6 min-w-0">
-        {/* Header / applicant */}
-        <div>
-          <p className="text-xs uppercase tracking-widest text-brand-gray mb-1" style={{ fontWeight: 600 }}>
-            {t.status.title}
-          </p>
-          <h1 className="text-3xl text-brand-dark" style={{ fontWeight: 700 }}>{app.name}</h1>
-        </div>
-
         {/* Status hero card */}
         <div className={`border border-brand-border p-8 ${style.bg}`}>
           <div className="flex items-start justify-between gap-4 mb-3">
@@ -503,7 +505,8 @@ function StatusInner({ locale, token, initialApp, initialConversation }: Props) 
           refreshing={refreshing}
         />
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 
