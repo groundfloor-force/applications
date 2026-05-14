@@ -69,7 +69,7 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
             <input type="tel" className="form-input" value={data.phone}
               onChange={handlePhone} onBlur={blur('phone')} placeholder="(506) 555-0100" />
           </FormField>
-          <FormField label={t.step2.dateOfBirth} error={err('birthDate')}>
+          <FormField label={t.step2.dateOfBirth} required error={err('birthDate')}>
             <input type="date" className="form-input" value={data.birthDate}
               onChange={f('birthDate')} onBlur={blur('birthDate')} />
           </FormField>

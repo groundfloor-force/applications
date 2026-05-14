@@ -43,8 +43,12 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
       <p className="text-sm text-brand-gray mb-2">
         {t.step6.subtitle}
       </p>
-      <div className="bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 mb-6">
+      <div className="bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 mb-3">
         Accepted formats: PDF, JPG, PNG, DOCX — max {MAX_MB} MB per file
+      </div>
+      <div className="bg-primary-50 border border-primary-200 p-3 text-sm text-primary-700 mb-6">
+        <p className="mb-1" style={{ fontWeight: 600 }}>{t.step6.emailLaterTitle}</p>
+        <p>{t.step6.emailLaterBody}</p>
       </div>
 
       <div className="form-section">

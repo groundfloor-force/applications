@@ -14,12 +14,14 @@ interface Props {
 
 export default function Step7References({ data, onChange, errors, onFieldBlur }: Props) {
   void onFieldBlur // available for future use
-  void errors
   const t = useT()
   const f =
     (field: keyof FormData) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       onChange({ [field]: e.target.value })
+
+  const cosignerStarted =
+    !!(data.cosignerFirstName || data.cosignerLastName || data.cosignerPhone || data.cosignerEmail)
 
   return (
     <div>
@@ -66,7 +68,7 @@ export default function Step7References({ data, onChange, errors, onFieldBlur }:
             <input className="form-input" value={data.cosignerRelationship} onChange={f('cosignerRelationship')} placeholder={t.step7.relationshipPlaceholder} />
           </FormField>
           <div />
-          <FormField label={t.common.email}>
+          <FormField label={t.common.email} required={cosignerStarted} error={cosignerStarted ? errors.cosignerEmail : undefined}>
             <input type="email" className="form-input" value={data.cosignerEmail} onChange={f('cosignerEmail')} />
           </FormField>
           <FormField label={t.common.phone}>

@@ -45,13 +45,13 @@ export async function POST(
       { status: 400 }
     )
   }
-  if (!cosigner.email && !cosigner.phone) {
+  if (!cosigner.email) {
     return NextResponse.json(
-      { error: 'Provide at least one of co-signer email or phone.' },
+      { error: 'Co-signer email is required (needed later for lease signing).' },
       { status: 400 }
     )
   }
-  if (cosigner.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cosigner.email)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cosigner.email)) {
     return NextResponse.json(
       { error: 'Enter a valid email address.' },
       { status: 400 }

@@ -32,56 +32,83 @@ interface Props {
   initialConversation: ConversationEntry[]
 }
 
+// Applicant-facing status buckets. Internal Monday statuses (Roommate
+// Exchange, Re-Rent App, Hold, etc.) are collapsed into a small, friendly
+// set so applicants don't see PM-internal workflow stages.
+type Bucket = 'Received' | 'InProgress' | 'InfoNeeded' | 'Approved' | 'NotApproved' | 'Cancelled'
+
+const STATUS_TO_BUCKET: Record<string, Bucket> = {
+  // Received
+  'New': 'Received',
+  // Approved family (lease sent/signed = effectively approved from applicant POV)
+  'Approved': 'Approved',
+  'Sent': 'Approved',
+  'Signed': 'Approved',
+  '*Complete*': 'Approved',
+  '*Unit Rented*': 'Approved',
+  'RM Change - Signed': 'Approved',
+  // Not approved
+  '*Rejected*': 'NotApproved',
+  // Cancelled
+  '*Canceled*': 'Cancelled',
+  '*Stuck - Cancelled*': 'Cancelled',
+  'Applicant Cancelled': 'Cancelled',
+  // Info needed
+  'Hold': 'InfoNeeded',
+  // Everything else (In Progress, *Stuck*, Roommate changes, Re-Rent, etc.) → In Progress
+}
+
+function bucketFor(rawStatus: string): Bucket {
+  return STATUS_TO_BUCKET[rawStatus.trim()] ?? 'InProgress'
+}
+
 type StatusStyle = { bg: string; text: string; dot: string }
 
-const STATUS_STYLES: Record<string, StatusStyle> = {
-  New:            { bg: 'bg-blue-50',   text: 'text-blue-700',  dot: 'bg-blue-400'   },
-  'Under Review': { bg: 'bg-amber-50',  text: 'text-amber-700', dot: 'bg-amber-400'  },
-  Reviewing:      { bg: 'bg-amber-50',  text: 'text-amber-700', dot: 'bg-amber-400'  },
-  Pending:        { bg: 'bg-amber-50',  text: 'text-amber-700', dot: 'bg-amber-400'  },
-  'On Hold':      { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-400' },
-  Hold:           { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-400' },
-  Approved:       { bg: 'bg-green-50',  text: 'text-green-700', dot: 'bg-green-500'  },
-  Declined:       { bg: 'bg-red-50',    text: 'text-red-700',   dot: 'bg-red-500'    },
-  Rejected:       { bg: 'bg-red-50',    text: 'text-red-700',   dot: 'bg-red-500'    },
+const BUCKET_STYLES: Record<Bucket, StatusStyle> = {
+  Received:    { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-400'   },
+  InProgress:  { bg: 'bg-amber-50',  text: 'text-amber-700',  dot: 'bg-amber-400'  },
+  InfoNeeded:  { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-400' },
+  Approved:    { bg: 'bg-green-50',  text: 'text-green-700',  dot: 'bg-green-500'  },
+  NotApproved: { bg: 'bg-red-50',    text: 'text-red-700',    dot: 'bg-red-500'    },
+  Cancelled:   { bg: 'bg-gray-50',   text: 'text-gray-700',   dot: 'bg-gray-400'   },
 }
 
-const NEUTRAL_STYLE: StatusStyle = { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-400' }
-
-const STATUS_LABELS: Record<Locale, Record<string, string>> = {
+const BUCKET_LABELS: Record<Locale, Record<Bucket, string>> = {
   en: {
-    New: 'Received', 'Under Review': 'Under Review', Reviewing: 'Under Review',
-    Approved: 'Approved', Declined: 'Not Selected', Rejected: 'Not Selected',
+    Received: 'Received',
+    InProgress: 'In Progress',
+    InfoNeeded: 'In Progress — Information Needed',
+    Approved: 'Approved',
+    NotApproved: 'Not Approved',
+    Cancelled: 'Cancelled',
   },
   fr: {
-    New: 'Reçue', 'Under Review': 'En cours d’examen', Reviewing: 'En cours d’examen',
-    Approved: 'Approuvée', Declined: 'Non retenue', Rejected: 'Non retenue',
-    Pending: 'En attente', 'On Hold': 'En suspens',
+    Received: 'Reçue',
+    InProgress: 'En traitement',
+    InfoNeeded: 'En traitement — renseignements requis',
+    Approved: 'Approuvée',
+    NotApproved: 'Non approuvée',
+    Cancelled: 'Annulée',
   },
 }
 
-const STATUS_MESSAGES: Record<Locale, Record<string, string>> = {
+const BUCKET_MESSAGES: Record<Locale, Record<Bucket, string>> = {
   en: {
-    New: 'Your application has been received and is in our queue. We typically review applications within 1–2 business days.',
-    'Under Review': 'Your application is currently being reviewed by our team. We may be contacting your references and previous landlord.',
-    Reviewing: 'Your application is currently being reviewed by our team. We may be contacting your references and previous landlord.',
-    Approved: 'Congratulations! Your application has been approved. Our team will be reaching out to you shortly with next steps.',
-    Declined: 'Thank you for your interest. Unfortunately your application was not selected for this unit. We encourage you to apply again for other available units.',
-    Rejected: 'Thank you for your interest. Unfortunately your application was not selected for this unit. We encourage you to apply again for other available units.',
+    Received: 'Your application has been received and is in our queue. We typically review applications within 1–2 business days.',
+    InProgress: 'Your application is being processed by our team. We may contact your references and previous landlord while we review.',
+    InfoNeeded: 'We need a little more from you. Please check your email for next steps, or use the chat on this page to reach out.',
+    Approved: 'Congratulations! Your application has been approved. Our team will be in touch shortly with next steps.',
+    NotApproved: 'Thank you for your interest. Unfortunately your application was not approved for this unit. You are welcome to apply for other available units.',
+    Cancelled: 'This application has been cancelled. If this is unexpected, please contact us so we can help.',
   },
   fr: {
-    New: 'Votre demande a été reçue et est dans notre file d’attente. Nous examinons généralement les demandes sous 1 à 2 jours ouvrables.',
-    'Under Review': 'Votre demande est actuellement à l’étude par notre équipe. Nous pourrions communiquer avec vos références et votre propriétaire précédent.',
-    Reviewing: 'Votre demande est actuellement à l’étude par notre équipe. Nous pourrions communiquer avec vos références et votre propriétaire précédent.',
-    Approved: 'Félicitations! Votre demande a été approuvée. Notre équipe communiquera avec vous sous peu pour vous indiquer les prochaines étapes.',
-    Declined: 'Merci de votre intérêt. Malheureusement, votre demande n’a pas été retenue pour cette unité. Nous vous encourageons à postuler pour d’autres unités disponibles.',
-    Rejected: 'Merci de votre intérêt. Malheureusement, votre demande n’a pas été retenue pour cette unité. Nous vous encourageons à postuler pour d’autres unités disponibles.',
+    Received: 'Votre demande a été reçue et est dans notre file d’attente. Nous examinons généralement les demandes sous 1 à 2 jours ouvrables.',
+    InProgress: 'Votre demande est en traitement par notre équipe. Nous pourrions communiquer avec vos références et votre propriétaire précédent pendant l’examen.',
+    InfoNeeded: 'Nous avons besoin de renseignements supplémentaires. Veuillez vérifier votre courriel pour les prochaines étapes ou utiliser le clavardage sur cette page pour nous écrire.',
+    Approved: 'Félicitations! Votre demande a été approuvée. Notre équipe communiquera avec vous sous peu pour les prochaines étapes.',
+    NotApproved: 'Merci de votre intérêt. Malheureusement, votre demande n’a pas été approuvée pour cette unité. Vous pouvez postuler pour d’autres unités disponibles.',
+    Cancelled: 'Cette demande a été annulée. Si vous croyez qu’il s’agit d’une erreur, veuillez communiquer avec nous.',
   },
-}
-
-const GENERIC_MESSAGE: Record<Locale, string> = {
-  en: 'The current status of your application is shown above. We will reach out if anything more is needed from you.',
-  fr: 'L’état actuel de votre demande est indiqué ci-dessus. Nous communiquerons avec vous si nous avons besoin d’information supplémentaire.',
 }
 
 function formatTime(iso: string, locale: Locale): string {
@@ -116,6 +143,14 @@ function CosignerForm({
     setError('')
     if (!firstName.trim() || !lastName.trim()) {
       setError(t.status.cosignerNameFirst + ' / ' + t.status.cosignerNameLast)
+      return
+    }
+    if (!email.trim()) {
+      setError(t.validation.cosignerEmailRequired)
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError(t.validation.cosignerEmailInvalid)
       return
     }
     setSubmitting(true)
@@ -165,9 +200,11 @@ function CosignerForm({
             onChange={(e) => setPhone(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
-          <label className="form-label">{t.status.cosignerEmail}</label>
+          <label className="form-label">
+            {t.status.cosignerEmail} <span className="required">*</span>
+          </label>
           <input type="email" className="form-input" value={email}
-            onChange={(e) => setEmail(e.target.value)} />
+            onChange={(e) => setEmail(e.target.value)} required />
         </div>
       </div>
 
@@ -376,7 +413,7 @@ function StatusInner({ locale, token, initialApp, initialConversation }: Props) 
   }
 
   useEffect(() => {
-    pollRef.current = setInterval(fetchStatus, 30_000)
+    pollRef.current = setInterval(fetchStatus, 300_000)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
@@ -384,9 +421,10 @@ function StatusInner({ locale, token, initialApp, initialConversation }: Props) 
   }, [token])
 
   const rawStatus = app.status?.trim() || 'New'
-  const style = STATUS_STYLES[rawStatus] ?? NEUTRAL_STYLE
-  const statusLabel = STATUS_LABELS[locale][rawStatus] ?? rawStatus
-  const statusMessage = STATUS_MESSAGES[locale][rawStatus] ?? GENERIC_MESSAGE[locale]
+  const bucket = bucketFor(rawStatus)
+  const style = BUCKET_STYLES[bucket]
+  const statusLabel = BUCKET_LABELS[locale][bucket]
+  const statusMessage = BUCKET_MESSAGES[locale][bucket]
 
   const lastCheckedAgo = (() => {
     const seconds = Math.floor((Date.now() - lastChecked) / 1000)

@@ -33,6 +33,7 @@ function validate(step: number, data: FormData, v: ValidationMessages): Record<s
     if (!data.phone.trim()) e.phone = v.phoneRequired
     if (!data.currentAddress.trim()) e.currentAddress = v.streetRequired
     if (!data.currentCity.trim()) e.currentCity = v.cityRequired
+    if (!data.birthDate) e.birthDate = v.birthDateRequired
     if (!data.children.trim()) e.children = v.childrenRequired
     if (!data.viewedUnit) e.viewedUnit = v.viewedRequired
   }
@@ -69,8 +70,22 @@ function validate(step: number, data: FormData, v: ValidationMessages): Record<s
     if (!data.employerName.trim()) e.employerName = v.employerNameRequired
   }
 
+  // Co-signer email is required as soon as any co-signer detail is filled in
+  // (because we need it later for lease signing). Validate on the last step
+  // so we don't block the applicant earlier if they leave the section blank.
   if (step === 8) {
     if (!data.termsAgreed) e.termsAgreed = v.termsRequired
+    const cosignerStarted = !!(
+      data.cosignerFirstName ||
+      data.cosignerLastName ||
+      data.cosignerPhone ||
+      data.cosignerEmail
+    )
+    if (cosignerStarted) {
+      if (!data.cosignerEmail.trim()) e.cosignerEmail = v.cosignerEmailRequired
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.cosignerEmail))
+        e.cosignerEmail = v.cosignerEmailInvalid
+    }
   }
 
   return e
@@ -486,16 +501,16 @@ export default function ApplicationForm({ config, autofill }: Props) {
                       </div>
                     ) : (
                       <>
-                        <p className="text-brand-dark text-sm leading-snug mb-2" style={{ fontWeight: 600 }}>
+                        <p className="text-brand-dark text-sm leading-snug mb-1" style={{ fontWeight: 600 }}>
                           {data.property.address}{data.property.unit ? `, Unit ${data.property.unit}` : ''}
                         </p>
-                        <p className="text-xs text-brand-gray mb-3">{data.property.city}</p>
+                        <p className="text-xs text-brand-gray mb-2">{data.property.city}</p>
+                        {data.property.rent > 0 && (
+                          <p className="text-lg text-primary-500 mb-2" style={{ fontWeight: 700 }}>
+                            ${data.property.rent.toLocaleString()}<span className="text-xs text-brand-gray ml-1" style={{ fontWeight: 400 }}>/mo</span>
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-1">
-                          {data.property.rent > 0 && (
-                            <span className="text-xs bg-primary-500 text-white px-2 py-0.5" style={{ fontWeight: 600 }}>
-                              ${data.property.rent.toLocaleString()}/mo
-                            </span>
-                          )}
                           {data.property.bedrooms && (
                             <span className="text-xs bg-brand-bg text-brand-dark px-2 py-0.5 border border-brand-border">{data.property.bedrooms}</span>
                           )}

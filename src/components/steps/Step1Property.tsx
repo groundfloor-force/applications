@@ -32,8 +32,8 @@ function UnitRow({
     property.bedrooms,
     property.bathrooms,
     property.available ? `${t.step1.available}: ${property.available}` : '',
-    property.parking,
-    property.pets,
+    property.parking ? `${t.step1.parking}: ${property.parking}` : '',
+    property.pets ? `${t.step1.pets}: ${property.pets}` : '',
   ].filter(Boolean)
 
   return (
