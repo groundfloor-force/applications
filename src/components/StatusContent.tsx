@@ -22,31 +22,66 @@ interface Props {
   initialApp: AppData
 }
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
+type StatusStyle = { bg: string; text: string; dot: string }
+
+const STATUS_STYLES: Record<string, StatusStyle> = {
   New:            { bg: 'bg-blue-50',   text: 'text-blue-700',  dot: 'bg-blue-400'   },
   'Under Review': { bg: 'bg-amber-50',  text: 'text-amber-700', dot: 'bg-amber-400'  },
+  Reviewing:      { bg: 'bg-amber-50',  text: 'text-amber-700', dot: 'bg-amber-400'  },
+  Pending:        { bg: 'bg-amber-50',  text: 'text-amber-700', dot: 'bg-amber-400'  },
+  'On Hold':      { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-400' },
   Approved:       { bg: 'bg-green-50',  text: 'text-green-700', dot: 'bg-green-500'  },
   Declined:       { bg: 'bg-red-50',    text: 'text-red-700',   dot: 'bg-red-500'    },
+  Rejected:       { bg: 'bg-red-50',    text: 'text-red-700',   dot: 'bg-red-500'    },
 }
 
+const NEUTRAL_STYLE: StatusStyle = { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-400' }
+
+// Localized display label for known statuses. Unknown statuses use the raw
+// Monday label verbatim, so PMs control exactly what applicants see.
 const STATUS_LABELS: Record<Locale, Record<string, string>> = {
-  en: { New: 'Received', 'Under Review': 'Under Review', Approved: 'Approved', Declined: 'Not Selected' },
-  fr: { New: 'Reçue', 'Under Review': 'En cours d’examen', Approved: 'Approuvée', Declined: 'Non retenue' },
+  en: {
+    New: 'Received',
+    'Under Review': 'Under Review',
+    Reviewing: 'Under Review',
+    Approved: 'Approved',
+    Declined: 'Not Selected',
+    Rejected: 'Not Selected',
+  },
+  fr: {
+    New: 'Reçue',
+    'Under Review': 'En cours d’examen',
+    Reviewing: 'En cours d’examen',
+    Approved: 'Approuvée',
+    Declined: 'Non retenue',
+    Rejected: 'Non retenue',
+    Pending: 'En attente',
+    'On Hold': 'En suspens',
+  },
 }
 
 const STATUS_MESSAGES: Record<Locale, Record<string, string>> = {
   en: {
     New: 'Your application has been received and is in our queue. We typically review applications within 1–2 business days.',
     'Under Review': 'Your application is currently being reviewed by our team. We may be contacting your references and previous landlord.',
+    Reviewing: 'Your application is currently being reviewed by our team. We may be contacting your references and previous landlord.',
     Approved: 'Congratulations! Your application has been approved. Our team will be reaching out to you shortly with next steps.',
     Declined: 'Thank you for your interest. Unfortunately your application was not selected for this unit. We encourage you to apply again for other available units.',
+    Rejected: 'Thank you for your interest. Unfortunately your application was not selected for this unit. We encourage you to apply again for other available units.',
   },
   fr: {
     New: 'Votre demande a été reçue et est dans notre file d’attente. Nous examinons généralement les demandes sous 1 à 2 jours ouvrables.',
     'Under Review': 'Votre demande est actuellement à l’étude par notre équipe. Nous pourrions communiquer avec vos références et votre propriétaire précédent.',
+    Reviewing: 'Votre demande est actuellement à l’étude par notre équipe. Nous pourrions communiquer avec vos références et votre propriétaire précédent.',
     Approved: 'Félicitations! Votre demande a été approuvée. Notre équipe communiquera avec vous sous peu pour vous indiquer les prochaines étapes.',
     Declined: 'Merci de votre intérêt. Malheureusement, votre demande n’a pas été retenue pour cette unité. Nous vous encourageons à postuler pour d’autres unités disponibles.',
+    Rejected: 'Merci de votre intérêt. Malheureusement, votre demande n’a pas été retenue pour cette unité. Nous vous encourageons à postuler pour d’autres unités disponibles.',
   },
+}
+
+const GENERIC_MESSAGE: Record<Locale, string> = {
+  en: 'The current status of your application is shown above. We will reach out if anything more is needed from you.',
+  fr: 'L’état actuel de votre demande est indiqué ci-dessus. Nous communiquerons avec vous si nous avons besoin d’information supplémentaire.',
 }
 
 function CosignerForm({
@@ -171,9 +206,12 @@ function StatusInner({ locale, token, initialApp }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
-  const style = STATUS_STYLES[app.status] ?? STATUS_STYLES['New']
-  const statusLabel = STATUS_LABELS[locale][app.status] ?? STATUS_LABELS[locale]['New']
-  const statusMessage = STATUS_MESSAGES[locale][app.status] ?? STATUS_MESSAGES[locale]['New']
+  // Fall back to the raw Monday status text when we don't have a translation
+  // — PMs can use any label they like and applicants will see it verbatim.
+  const rawStatus = app.status?.trim() || 'New'
+  const style = STATUS_STYLES[rawStatus] ?? NEUTRAL_STYLE
+  const statusLabel = STATUS_LABELS[locale][rawStatus] ?? rawStatus
+  const statusMessage = STATUS_MESSAGES[locale][rawStatus] ?? GENERIC_MESSAGE[locale]
 
   const lastCheckedAgo = (() => {
     const seconds = Math.floor((Date.now() - lastChecked) / 1000)
