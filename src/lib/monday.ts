@@ -462,11 +462,17 @@ export async function createApplicantMessage(
     ? 'Message du demandeur via la page d’état'
     : 'Message from applicant via status page'
 
+  // Monday's create_update body accepts HTML. To trigger an @-mention
+  // notification, the mention must be an <a class="cdx-mention"> tag
+  // with data-mention-type and data-mention-id attributes — this is the
+  // same markup Monday's UI generates when you type @ in the editor.
+  const mention = `<a class="cdx-mention" data-mention-type="User" data-mention-id="${KAYLA_USER_ID}" href="/users/${KAYLA_USER_ID}">@Kayla Richard</a>`
+
   const body = [
     APPLICANT_MSG_MARKER,
     `<p><b>${heading}${applicantName ? ` — ${escapeHtml(applicantName)}` : ''}</b></p>`,
     `<p>${safe}</p>`,
-    `<p>cc <span data-mention-type="User" data-mention-id="${KAYLA_USER_ID}">@Kayla Richard</span></p>`,
+    `<p>cc ${mention}</p>`,
   ].join('\n')
 
   const mutation = `

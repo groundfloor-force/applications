@@ -192,19 +192,26 @@ function MessagesPanel({
   token,
   locale,
   conversation,
-  onSent,
+  setConversation,
   refreshing,
 }: {
   token: string
   locale: Locale
   conversation: ConversationMessage[]
-  onSent: (next: ConversationMessage[]) => void
+  setConversation: React.Dispatch<React.SetStateAction<ConversationMessage[]>>
   refreshing: boolean
 }) {
   const t = useT()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
+
+  // Keep the latest message in view whenever the conversation grows
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [conversation.length])
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -212,6 +219,18 @@ function MessagesPanel({
     if (!text || sending) return
     setError('')
     setSending(true)
+
+    // Optimistic: show the applicant's message immediately
+    const tempId = `pending-${Date.now()}`
+    const optimistic: ConversationMessage = {
+      id: tempId,
+      body: text,
+      createdAt: new Date().toISOString(),
+      replies: [],
+    }
+    setConversation((prev) => [...prev, optimistic])
+    setMessage('')
+
     try {
       const res = await fetch(`/api/status/${encodeURIComponent(token)}/messages`, {
         method: 'POST',
@@ -220,9 +239,25 @@ function MessagesPanel({
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || t.status.messagesSendError)
-      onSent(json.conversation ?? [])
-      setMessage('')
+
+      // Replace the optimistic entry with the authoritative conversation
+      // from the server. If Monday hasn't indexed the message yet, keep
+      // the optimistic one so the user still sees what they sent.
+      const serverConv: ConversationMessage[] = json.conversation ?? []
+      setConversation((prev) => {
+        if (serverConv.length >= prev.filter((m) => !m.id.startsWith('pending-')).length + 1) {
+          return serverConv
+        }
+        return prev.map((m) =>
+          m.id === tempId
+            ? { ...m, id: `local-${Date.now()}` }  // promote to a stable local id
+            : m
+        )
+      })
     } catch (err) {
+      // Roll back optimistic entry on failure
+      setConversation((prev) => prev.filter((m) => m.id !== tempId))
+      setMessage(text)
       const msg = err instanceof Error ? err.message : t.status.messagesSendError
       setError(msg)
     } finally {
@@ -255,7 +290,7 @@ function MessagesPanel({
       </div>
 
       {/* Conversation */}
-      <div className="flex-1 px-5 py-4 space-y-4 overflow-y-auto" style={{ minHeight: 320, maxHeight: 540 }}>
+      <div ref={scrollerRef} className="flex-1 px-5 py-4 space-y-4 overflow-y-auto" style={{ minHeight: 320, maxHeight: 540 }}>
         {conversation.length === 0 ? (
           <p className="text-sm text-brand-gray text-center py-12">{t.status.messagesEmpty}</p>
         ) : (
@@ -501,7 +536,7 @@ function StatusInner({ locale, token, initialApp, initialConversation }: Props) 
           token={token}
           locale={locale}
           conversation={conversation}
-          onSent={(next) => setConversation(next)}
+          setConversation={setConversation}
           refreshing={refreshing}
         />
       </div>
