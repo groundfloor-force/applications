@@ -87,6 +87,13 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
   label('Date of Birth', data.birthDate)
   label('Current Address', [data.currentAddress, data.currentAddressLine2, data.currentCity, data.currentProvince, data.currentPostal].filter(Boolean).join(', '))
   label('Children', data.children || 'None')
+  if (data.childrenList && data.childrenList.length > 0) {
+    data.childrenList
+      .filter((c) => c.name || c.birthDate)
+      .forEach((c) => {
+        label('  · Child', `${c.name || '—'}${c.birthDate ? ` (DOB: ${c.birthDate})` : ''}`)
+      })
+  }
   label('Pets', data.pets || 'None')
   spacer()
 

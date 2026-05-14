@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FormData } from '@/lib/types'
+import { FormData, ChildDetail } from '@/lib/types'
 import FormField from '@/components/FormField'
 import { formatPhone } from '@/lib/utils'
 import { useT } from '@/lib/locale-context'
+import DateInput from '@/components/DateInput'
+import MultiFileUploader from '@/components/MultiFileUploader'
 
 interface Props {
   data: FormData
@@ -70,8 +72,11 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
               onChange={handlePhone} onBlur={blur('phone')} placeholder="(506) 555-0100" />
           </FormField>
           <FormField label={t.step2.dateOfBirth} required error={err('birthDate')}>
-            <input type="date" className="form-input" value={data.birthDate}
-              onChange={f('birthDate')} onBlur={blur('birthDate')} />
+            <DateInput
+              value={data.birthDate}
+              onChange={(v) => onChange({ birthDate: v })}
+              onBlur={blur('birthDate')}
+            />
           </FormField>
         </div>
       </div>
@@ -139,6 +144,78 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           <FormField label={t.step2.petsLabel} hint={t.step2.petsHint}>
             <input className="form-input" value={data.pets} onChange={f('pets')} />
           </FormField>
+        </div>
+
+        {/* Optional child details */}
+        <div className="mt-5 pt-5 border-t border-brand-border">
+          <p className="text-sm text-brand-dark mb-1" style={{ fontWeight: 600 }}>
+            {t.step2.childDetailsTitle}
+          </p>
+          <p className="text-xs text-brand-gray mb-3">{t.step2.childDetailsHint}</p>
+
+          {data.childrenList.length > 0 && (
+            <div className="space-y-3 mb-3">
+              {data.childrenList.map((child, i) => (
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-3 items-end">
+                  <FormField label={t.step2.childName}>
+                    <input
+                      className="form-input"
+                      value={child.name}
+                      onChange={(e) => {
+                        const next = [...data.childrenList]
+                        next[i] = { ...next[i], name: e.target.value }
+                        onChange({ childrenList: next })
+                      }}
+                    />
+                  </FormField>
+                  <FormField label={t.step2.childBirthDate}>
+                    <DateInput
+                      value={child.birthDate}
+                      onChange={(v) => {
+                        const next = [...data.childrenList]
+                        next[i] = { ...next[i], birthDate: v }
+                        onChange({ childrenList: next })
+                      }}
+                    />
+                  </FormField>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ childrenList: data.childrenList.filter((_, j) => j !== i) })}
+                    className="h-[56px] px-3 text-sm text-secondary hover:underline whitespace-nowrap self-end"
+                  >
+                    {t.step2.removeChild}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                childrenList: [...data.childrenList, { name: '', birthDate: '' } as ChildDetail],
+              })
+            }
+            className="inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-brand-border hover:border-primary-400 hover:bg-primary-50 text-sm text-primary-600 transition-all"
+            style={{ fontWeight: 600 }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+            {t.step2.addChild}
+          </button>
+        </div>
+
+        {/* Pet photo */}
+        <div className="mt-5 pt-5 border-t border-brand-border">
+          <MultiFileUploader
+            files={data.petPhotos}
+            onChange={(files) => onChange({ petPhotos: files })}
+            accept=".jpg,.jpeg,.png,.heic,.pdf"
+            label={t.step2.petPhotoLabel}
+            hint={t.step2.petPhotoHint}
+          />
         </div>
       </div>
     </div>

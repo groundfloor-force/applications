@@ -353,6 +353,11 @@ export async function createApplicationUpdate(
     `Birth Date: ${data.birthDate || '—'}`,
     `Current Address: ${[data.currentAddress, data.currentAddressLine2, data.currentCity, data.currentProvince, data.currentPostal].filter(Boolean).join(', ')}`,
     `Children: ${data.children || 'None stated'}`,
+    ...(data.childrenList && data.childrenList.length > 0
+      ? data.childrenList
+          .filter((c) => c.name || c.birthDate)
+          .map((c) => `  · ${c.name || '—'}${c.birthDate ? ` (DOB: ${c.birthDate})` : ''}`)
+      : []),
     `Pets: ${data.pets || 'None stated'}`,
     '',
     multi ? '<b>Primary Property (1st choice)</b>' : '<b>Property Applied For</b>',
@@ -620,6 +625,16 @@ export async function getApplicantConversation(itemId: string): Promise<Conversa
   ]
 
   return entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+}
+
+// Post a plain HTML note as a Monday update on an item.
+export async function postPlainUpdate(itemId: string, bodyHtml: string): Promise<void> {
+  const mutation = `
+    mutation ($itemId: ID!, $body: String!) {
+      create_update(item_id: $itemId, body: $body) { id }
+    }
+  `
+  await mondayQuery(mutation, { itemId, body: bodyHtml })
 }
 
 // Post a co-signer addendum update note to an existing application item.

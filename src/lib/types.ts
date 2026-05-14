@@ -18,6 +18,11 @@ export interface Property {
   status: string
 }
 
+export interface ChildDetail {
+  name: string
+  birthDate: string
+}
+
 export interface Occupant {
   firstName: string
   lastName: string
@@ -70,7 +75,9 @@ export interface FormData {
   currentProvince: string
   currentPostal: string
   children: string
+  childrenList: ChildDetail[]
   pets: string
+  petPhotos: File[]
 
   // Step 3 – Household Details
   leasingAgent: string
@@ -110,8 +117,10 @@ export interface FormData {
   cosignerRelationship: string
   cosignerEmail: string
   cosignerPhone: string
+  cosignerDocs: File[]
 
   // Step 8
+  supportingDocs: File[]
   additionalDetails: string
   termsAgreed: boolean
 }
@@ -172,7 +181,9 @@ export const initialFormData: FormData = {
   currentProvince: '',
   currentPostal: '',
   children: '',
+  childrenList: [],
   pets: '',
+  petPhotos: [],
   leasingAgent: '',
   securityDeposit: '',
   monthlyRent: '',
@@ -202,6 +213,8 @@ export const initialFormData: FormData = {
   cosignerRelationship: '',
   cosignerEmail: '',
   cosignerPhone: '',
+  cosignerDocs: [],
+  supportingDocs: [],
   additionalDetails: '',
   termsAgreed: false,
 }

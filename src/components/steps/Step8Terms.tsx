@@ -4,6 +4,7 @@ import { FormData, FormConfig } from '@/lib/types'
 import FormField from '@/components/FormField'
 import { useT, useLocale } from '@/lib/locale-context'
 import { tpl } from '@/lib/i18n'
+import MultiFileUploader from '@/components/MultiFileUploader'
 
 interface Props {
   data: FormData
@@ -151,6 +152,15 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
             placeholder={t.step8.additionalInfoPlaceholder}
           />
         </FormField>
+
+        <div className="mt-5 pt-5 border-t border-brand-border">
+          <MultiFileUploader
+            files={data.supportingDocs}
+            onChange={(files) => onChange({ supportingDocs: files })}
+            label={t.step8.supportingDocsTitle}
+            hint={t.step8.supportingDocsHint}
+          />
+        </div>
       </div>
 
       {/* Terms */}

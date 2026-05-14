@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createApplication, createApplicationUpdate, uploadFileToMonday } from '@/lib/monday'
+import { createApplication, createApplicationUpdate, uploadFileToMonday, postPlainUpdate } from '@/lib/monday'
 import { sendConfirmationEmail, sendNotificationEmail } from '@/lib/email'
 import { getConfig } from '@/lib/config'
 import { generateApplicationPdf } from '@/lib/pdf'
@@ -20,32 +20,34 @@ export async function POST(req: NextRequest) {
     const rawLocale = multipart.get('locale')
     const locale: 'en' | 'fr' = rawLocale === 'fr' ? 'fr' : 'en'
 
-    // Collect uploaded file buffers
+    // Collect uploaded file buffers with descriptive name prefixes so PMs
+    // can tell apart pay stubs, pet photos, co-signer docs, and supporting
+    // docs in the Monday files column.
     const fileBuffers: { buffer: Buffer; name: string; type: string; label: string }[] = []
+    const baseName = `${data.firstName}_${data.lastName}`
+
     for (const [key, value] of multipart.entries()) {
-      if (value instanceof File && value.size > 0) {
-        if (key.startsWith('doc_')) {
-          const buf = Buffer.from(await value.arrayBuffer())
-          fileBuffers.push({
-            buffer: buf,
-            name: value.name,
-            type: value.type || 'application/octet-stream',
-            label: `${data.firstName}_${data.lastName}`,
-          })
-        }
-        if (key.startsWith('occdoc_')) {
-          const parts = key.split('_')
-          const occIdx = parseInt(parts[1])
-          const occ = data.occupants?.[occIdx]
-          const occName = occ ? `${occ.firstName}_${occ.lastName}` : `Occupant_${occIdx + 2}`
-          const buf = Buffer.from(await value.arrayBuffer())
-          fileBuffers.push({
-            buffer: buf,
-            name: value.name,
-            type: value.type || 'application/octet-stream',
-            label: occName,
-          })
-        }
+      if (!(value instanceof File) || value.size === 0) continue
+      const buf = Buffer.from(await value.arrayBuffer())
+      const type = value.type || 'application/octet-stream'
+
+      if (key.startsWith('doc_')) {
+        fileBuffers.push({ buffer: buf, name: value.name, type, label: baseName })
+      } else if (key.startsWith('occdoc_')) {
+        const parts = key.split('_')
+        const occIdx = parseInt(parts[1])
+        const occ = data.occupants?.[occIdx]
+        const occName = occ ? `${occ.firstName}_${occ.lastName}` : `Occupant_${occIdx + 2}`
+        fileBuffers.push({ buffer: buf, name: value.name, type, label: occName })
+      } else if (key.startsWith('petphoto_')) {
+        fileBuffers.push({ buffer: buf, name: value.name, type, label: `${baseName}_PetPhoto` })
+      } else if (key.startsWith('cosignerdoc_')) {
+        const cName = (data.cosignerFirstName && data.cosignerLastName)
+          ? `${data.cosignerFirstName}_${data.cosignerLastName}`
+          : 'Cosigner'
+        fileBuffers.push({ buffer: buf, name: value.name, type, label: `Cosigner_${cName}` })
+      } else if (key.startsWith('supdoc_')) {
+        fileBuffers.push({ buffer: buf, name: value.name, type, label: `${baseName}_Supporting` })
       }
     }
 
@@ -54,6 +56,16 @@ export async function POST(req: NextRequest) {
     // Single Monday item per submission, even when multiple properties were
     // selected. The full preference list is surfaced in the update note.
     const itemId = await createApplication(data, token, locale)
+
+    // Surface the applicant's preferred language as a short note before the
+    // main details update — Monday lists updates newest-first, so PMs see
+    // this near the top when they open the item.
+    const langLabel = locale === 'fr' ? 'Français (FR)' : 'English (EN)'
+    await postPlainUpdate(
+      itemId,
+      `<p><b>Preferred language:</b> ${langLabel}</p>`
+    ).catch(() => null)
+
     await createApplicationUpdate(itemId, data)
 
     const pdfBuffer = generateApplicationPdf(data)

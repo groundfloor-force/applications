@@ -130,7 +130,9 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
   currentProvince: 'NB',
   currentPostal: 'E1C 1B2',
   children: '1',
+  childrenList: [{ name: 'Sophie Tester', birthDate: '2020-06-10' }],
   pets: '1 cat',
+  petPhotos: [],
   leasingAgent: 'Sarah Jones',
   securityDeposit: '1350',
   monthlyRent: '1350',
@@ -242,6 +244,8 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
   cosignerRelationship: 'Parent',
   cosignerEmail: 'margaret.tester@example.com',
   cosignerPhone: '506-555-6000',
+  cosignerDocs: [],
+  supportingDocs: [],
   additionalDetails: 'TEST APPLICATION — please delete. We are a quiet, responsible family and have excellent rental history.',
   termsAgreed: true,
 }
@@ -294,7 +298,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
     ].join('\n')
     const blob = new Blob([content], { type: 'application/pdf' })
     const file = new File([blob], 'test-paystub.pdf', { type: 'application/pdf' })
-    setData((prev) => ({ ...prev, documents: [file] }))
+    setData((prev) => ({ ...prev, documents: [file], petPhotos: [], cosignerDocs: [], supportingDocs: [] }))
   }, [autofill])
 
   const onChange = useCallback((updates: Partial<FormData>) => {
@@ -362,7 +366,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
       const formPayload = new FormData()
 
       // Serialize everything except File arrays
-      const { documents, occupantDocs, ...rest } = data
+      const { documents, occupantDocs, petPhotos, cosignerDocs, supportingDocs, ...rest } = data
       formPayload.append('data', JSON.stringify(rest))
       formPayload.append('locale', locale)
 
@@ -376,6 +380,21 @@ export default function ApplicationForm({ config, autofill }: Props) {
         files.forEach((file, fileIdx) => {
           formPayload.append(`occdoc_${occIdx}_${fileIdx}`, file, file.name)
         })
+      })
+
+      // Pet photos
+      petPhotos.forEach((file, i) => {
+        formPayload.append(`petphoto_${i}`, file, file.name)
+      })
+
+      // Co-signer proof of income / savings
+      cosignerDocs.forEach((file, i) => {
+        formPayload.append(`cosignerdoc_${i}`, file, file.name)
+      })
+
+      // Supporting documents (Review step)
+      supportingDocs.forEach((file, i) => {
+        formPayload.append(`supdoc_${i}`, file, file.name)
       })
 
       const res = await fetch('/api/submit', { method: 'POST', body: formPayload })

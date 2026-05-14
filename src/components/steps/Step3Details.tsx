@@ -5,6 +5,7 @@ import { FormData, emptyOccupant } from '@/lib/types'
 import FormField from '@/components/FormField'
 import { useT } from '@/lib/locale-context'
 import { tpl } from '@/lib/i18n'
+import DateInput from '@/components/DateInput'
 
 interface Props {
   data: FormData
@@ -63,7 +64,10 @@ export default function Step3Details({ data, onChange, errors }: Props) {
             <input type="number" className="form-input" value={data.securityDeposit} onChange={f('securityDeposit')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
           </FormField>
           <FormField label={t.step3.moveInDate} required error={errors.moveInDate} hint={t.step3.moveInHint}>
-            <input type="date" className="form-input" value={data.moveInDate} onChange={f('moveInDate')} />
+            <DateInput
+              value={data.moveInDate}
+              onChange={(v) => onChange({ moveInDate: v })}
+            />
           </FormField>
         </div>
       </div>

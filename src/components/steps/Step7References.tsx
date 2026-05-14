@@ -4,6 +4,7 @@ import { FormData } from '@/lib/types'
 import FormField from '@/components/FormField'
 import { formatPhone } from '@/lib/utils'
 import { useT } from '@/lib/locale-context'
+import MultiFileUploader from '@/components/MultiFileUploader'
 
 interface Props {
   data: FormData
@@ -76,6 +77,17 @@ export default function Step7References({ data, onChange, errors, onFieldBlur }:
               onChange={(e) => onChange({ cosignerPhone: formatPhone(e.target.value) })} />
           </FormField>
         </div>
+
+        {cosignerStarted && (
+          <div className="mt-5 pt-5 border-t border-brand-border">
+            <MultiFileUploader
+              files={data.cosignerDocs}
+              onChange={(files) => onChange({ cosignerDocs: files })}
+              label={t.step7.cosignerDocsTitle}
+              hint={t.step7.cosignerDocsHint}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
