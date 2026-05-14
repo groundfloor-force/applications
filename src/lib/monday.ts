@@ -147,37 +147,38 @@ export async function getRecentApplications(limit = 500) {
   }).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) // newest first by created_at
 }
 
-// Fetch every Monday item that shares a token (one per property when
-// the applicant applied for multiple). Used by the co-signer return flow
-// so the addendum is attached to all items, not just the first.
+// Fetch every Monday item that shares a token. Used by the co-signer
+// return flow so the addendum is attached to all items if any.
+// Uses items_page_by_column_values (the current Monday API; the older
+// items_by_column_values was deprecated and removed).
 export async function getAllApplicationItemsByToken(token: string): Promise<string[]> {
   const safe = token.replace(/[^a-zA-Z0-9-]/g, '')
   const query = `
-    query {
-      items_by_column_values(
-        board_id: ${APPLICATIONS_BOARD_ID},
-        column_id: "text0",
-        column_value: "${safe}"
-      ) { id }
+    query ($boardId: ID!, $columns: [ItemsPageByColumnValuesQuery!]) {
+      items_page_by_column_values(board_id: $boardId, columns: $columns, limit: 25) {
+        items { id }
+      }
     }
   `
-  const data = await mondayQuery<{ items_by_column_values: { id: string }[] }>(query)
-  return data.items_by_column_values?.map((i) => i.id) ?? []
+  const data = await mondayQuery<{
+    items_page_by_column_values: { items: { id: string }[] }
+  }>(query, {
+    boardId: String(APPLICATIONS_BOARD_ID),
+    columns: [{ column_id: 'text0', column_values: [safe] }],
+  })
+  return data.items_page_by_column_values?.items?.map((i) => i.id) ?? []
 }
 
 export async function getApplicationByToken(token: string) {
-  // Sanitize token — only allow alphanumeric + hyphens
   const safe = token.replace(/[^a-zA-Z0-9-]/g, '')
   const query = `
-    query {
-      items_by_column_values(
-        board_id: ${APPLICATIONS_BOARD_ID},
-        column_id: "text0",
-        column_value: "${safe}"
-      ) {
-        id name created_at url
-        column_values(ids: ["status1", "rental_address", "unit__", "date891"]) {
-          id text
+    query ($boardId: ID!, $columns: [ItemsPageByColumnValuesQuery!]) {
+      items_page_by_column_values(board_id: $boardId, columns: $columns, limit: 25) {
+        items {
+          id name created_at url
+          column_values(ids: ["status1", "rental_address", "unit__", "date891"]) {
+            id text
+          }
         }
       }
     }
@@ -186,8 +187,13 @@ export async function getApplicationByToken(token: string) {
     id: string; name: string; created_at: string; url: string
     column_values: { id: string; text: string }[]
   }
-  const data = await mondayQuery<{ items_by_column_values: RawItem[] }>(query)
-  const item = data.items_by_column_values?.[0]
+  const data = await mondayQuery<{
+    items_page_by_column_values: { items: RawItem[] }
+  }>(query, {
+    boardId: String(APPLICATIONS_BOARD_ID),
+    columns: [{ column_id: 'text0', column_values: [safe] }],
+  })
+  const item = data.items_page_by_column_values?.items?.[0]
   if (!item) return null
   const t = (id: string) => item.column_values.find((c) => c.id === id)?.text ?? ''
   return {
