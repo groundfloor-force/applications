@@ -349,6 +349,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
       // Serialize everything except File arrays
       const { documents, occupantDocs, ...rest } = data
       formPayload.append('data', JSON.stringify(rest))
+      formPayload.append('locale', locale)
 
       // Primary applicant documents
       documents.forEach((file, i) => {

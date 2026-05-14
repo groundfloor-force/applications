@@ -17,6 +17,8 @@ export async function POST(req: NextRequest) {
     }
 
     const data: Omit<FormData, 'documents' | 'occupantDocs'> = JSON.parse(raw)
+    const rawLocale = multipart.get('locale')
+    const locale: 'en' | 'fr' = rawLocale === 'fr' ? 'fr' : 'en'
 
     // Collect uploaded file buffers
     const fileBuffers: { buffer: Buffer; name: string; type: string; label: string }[] = []
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // Single Monday item per submission, even when multiple properties were
     // selected. The full preference list is surfaced in the update note.
-    const itemId = await createApplication(data, token)
+    const itemId = await createApplication(data, token, locale)
     await createApplicationUpdate(itemId, data)
 
     const pdfBuffer = generateApplicationPdf(data)

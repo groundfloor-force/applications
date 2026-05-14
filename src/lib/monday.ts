@@ -164,7 +164,7 @@ export async function getAllApplicationItemsByToken(token: string): Promise<stri
     items_page_by_column_values: { items: { id: string }[] }
   }>(query, {
     boardId: String(APPLICATIONS_BOARD_ID),
-    columns: [{ column_id: 'text0', column_values: [safe] }],
+    columns: [{ column_id: 'text_mm3b6n9j', column_values: [safe] }],
   })
   return data.items_page_by_column_values?.items?.map((i) => i.id) ?? []
 }
@@ -191,7 +191,7 @@ export async function getApplicationByToken(token: string) {
     items_page_by_column_values: { items: RawItem[] }
   }>(query, {
     boardId: String(APPLICATIONS_BOARD_ID),
-    columns: [{ column_id: 'text0', column_values: [safe] }],
+    columns: [{ column_id: 'text_mm3b6n9j', column_values: [safe] }],
   })
   const item = data.items_page_by_column_values?.items?.[0]
   if (!item) return null
@@ -214,6 +214,7 @@ export async function getApplicationByToken(token: string) {
 export async function createApplication(
   data: Omit<FormData, 'documents' | 'occupantDocs'>,
   token?: string,
+  locale?: 'en' | 'fr',
 ): Promise<string> {
   const { property, occupants = [], properties = [] } = data
   const multi = properties.length > 1
@@ -264,8 +265,11 @@ export async function createApplication(
     ...((data.viewedUnit === 'Yes - In Person' || data.viewedUnit === 'Yes - Virtual Tour')
       && { status29: { label: 'Viewing Complete' } }),
 
-    // Application token for status page
-    ...(token && { text0: token }),
+    // Application token for status page (ApplicationId column)
+    ...(token && { text_mm3b6n9j: token }),
+
+    // Language the application was submitted in (Language dropdown)
+    ...(locale && { dropdown_mm3bp54f: { labels: [locale] } }),
   }
 
   // Additional occupants count
