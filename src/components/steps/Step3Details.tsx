@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { FormData, emptyOccupant } from '@/lib/types'
 import FormField from '@/components/FormField'
 import { useT } from '@/lib/locale-context'
@@ -33,6 +33,26 @@ export default function Step3Details({ data, onChange, errors }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.numOccupants])
 
+  // Auto-sync security deposit to monthly rent until the applicant manually
+  // edits the deposit. Once edited, leave it alone.
+  const depositTouchedRef = useRef(
+    data.securityDeposit !== '' && data.securityDeposit !== data.monthlyRent
+  )
+
+  const handleRentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    if (depositTouchedRef.current) {
+      onChange({ monthlyRent: v })
+    } else {
+      onChange({ monthlyRent: v, securityDeposit: v })
+    }
+  }
+
+  const handleDepositChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    depositTouchedRef.current = true
+    onChange({ securityDeposit: e.target.value })
+  }
+
   const { property } = data
 
   return (
@@ -50,25 +70,28 @@ export default function Step3Details({ data, onChange, errors }: Props) {
       <div className="form-section">
         <h3 className="section-title">{t.step3.leasingDetails}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <FormField label={t.step3.leasingAgent} required error={errors.leasingAgent}
-              hint={t.step3.leasingAgentHint}>
-              <input className="form-input" value={data.leasingAgent} onChange={f('leasingAgent')}
-                placeholder={t.step3.leasingAgentPlaceholder} />
-            </FormField>
-          </div>
           <FormField label={t.step3.monthlyRent} required error={errors.monthlyRent}>
-            <input type="number" className="form-input" value={data.monthlyRent} onChange={f('monthlyRent')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
+            <input type="number" className="form-input" value={data.monthlyRent}
+              onChange={handleRentChange}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
           </FormField>
-          <FormField label={t.step3.securityDeposit} required error={errors.securityDeposit}>
-            <input type="number" className="form-input" value={data.securityDeposit} onChange={f('securityDeposit')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
+          <FormField label={t.step3.securityDeposit} required error={errors.securityDeposit}
+            hint={t.step3.securityDepositHint}>
+            <input type="number" className="form-input" value={data.securityDeposit}
+              onChange={handleDepositChange}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
           </FormField>
-          <FormField label={t.step3.moveInDate} required error={errors.moveInDate} hint={t.step3.moveInHint}>
-            <DateInput
-              value={data.moveInDate}
-              onChange={(v) => onChange({ moveInDate: v })}
-            />
-          </FormField>
+          <div className="sm:col-span-2">
+            <FormField label={t.step3.moveInDate} required error={errors.moveInDate} hint={t.step3.moveInHint}>
+              <DateInput
+                value={data.moveInDate}
+                onChange={(v) => onChange({ moveInDate: v })}
+              />
+            </FormField>
+            <div className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2">
+              {t.step3.moveInDisclaimer}
+            </div>
+          </div>
         </div>
       </div>
 

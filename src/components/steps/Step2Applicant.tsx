@@ -54,6 +54,9 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
 
       <div className="form-section">
         <h3 className="section-title">{t.step2.aboutYou}</h3>
+        <p className="text-xs text-brand-gray bg-amber-50 border border-amber-200 px-3 py-2 mb-4">
+          {t.step2.aboutYouNote}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label={t.common.firstName} required error={err('firstName')}>
             <input className="form-input" value={data.firstName}
@@ -100,8 +103,9 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
             <input className="form-input" value={data.currentCity}
               onChange={f('currentCity')} onBlur={blur('currentCity')} />
           </FormField>
-          <FormField label={t.common.province}>
-            <select className="form-input" value={data.currentProvince} onChange={f('currentProvince')}>
+          <FormField label={t.common.province} required error={err('currentProvince')}>
+            <select className="form-input" value={data.currentProvince}
+              onChange={f('currentProvince')} onBlur={blur('currentProvince')}>
               <option value="">{t.common.selectEllipsis}</option>
               {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -125,12 +129,12 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
               <option value="Yes - Virtual Tour">{t.step2.viewedYesVirtual}</option>
             </select>
           </FormField>
-          {(data.viewedUnit === 'Yes - In Person' || data.viewedUnit === 'Yes - Virtual Tour') && (
-            <FormField label={t.step2.viewedByName} hint={t.step2.viewedByHint}>
-              <input className="form-input" value={data.viewedByName}
-                onChange={f('viewedByName')} />
-            </FormField>
-          )}
+          <FormField label={t.step2.leasingAgentLabel} required error={err('leasingAgent')}
+            hint={t.step2.leasingAgentHint}>
+            <input className="form-input" value={data.leasingAgent}
+              onChange={f('leasingAgent')} onBlur={blur('leasingAgent')}
+              placeholder={t.step2.leasingAgentPlaceholder} />
+          </FormField>
         </div>
       </div>
 
@@ -144,6 +148,12 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           <FormField label={t.step2.petsLabel} hint={t.step2.petsHint}>
             <input className="form-input" value={data.pets} onChange={f('pets')} />
           </FormField>
+          <div className="sm:col-span-2">
+            <FormField label={t.step2.petNamesLabel} hint={t.step2.petNamesHint}>
+              <input className="form-input" value={data.petNames}
+                onChange={f('petNames')} placeholder="Whiskers, Rex" />
+            </FormField>
+          </div>
         </div>
 
         {/* Optional child details */}
@@ -156,7 +166,7 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           {data.childrenList.length > 0 && (
             <div className="space-y-3 mb-3">
               {data.childrenList.map((child, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-3 items-end">
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_160px_160px_auto] gap-3 items-end">
                   <FormField label={t.step2.childName}>
                     <input
                       className="form-input"
@@ -178,6 +188,22 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
                       }}
                     />
                   </FormField>
+                  <FormField label={t.step2.childGender}>
+                    <select
+                      className="form-input"
+                      value={child.gender}
+                      onChange={(e) => {
+                        const next = [...data.childrenList]
+                        next[i] = { ...next[i], gender: e.target.value }
+                        onChange({ childrenList: next })
+                      }}
+                    >
+                      <option value="">{t.common.selectEllipsis}</option>
+                      <option value="Male">{t.step2.childGenderMale}</option>
+                      <option value="Female">{t.step2.childGenderFemale}</option>
+                      <option value="Other">{t.step2.childGenderOther}</option>
+                    </select>
+                  </FormField>
                   <button
                     type="button"
                     onClick={() => onChange({ childrenList: data.childrenList.filter((_, j) => j !== i) })}
@@ -194,7 +220,10 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
             type="button"
             onClick={() =>
               onChange({
-                childrenList: [...data.childrenList, { name: '', birthDate: '' } as ChildDetail],
+                childrenList: [
+                  ...data.childrenList,
+                  { name: '', birthDate: '', gender: '' } as ChildDetail,
+                ],
               })
             }
             className="inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-brand-border hover:border-primary-400 hover:bg-primary-50 text-sm text-primary-600 transition-all"
@@ -215,6 +244,37 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
             accept=".jpg,.jpeg,.png,.heic,.pdf"
             label={t.step2.petPhotoLabel}
             hint={t.step2.petPhotoHint}
+            uploadLabel={t.step2.petPhotoButton}
+          />
+        </div>
+      </div>
+
+      {/* Optional identification */}
+      <div className="form-section">
+        <h3 className="section-title">{t.step2.identityTitle}</h3>
+        <p className="text-xs text-brand-gray mb-4">{t.step2.identityHint}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <FormField label={t.step2.sinLabel} hint={t.step2.sinHint}>
+              <input
+                className="form-input"
+                value={data.sin}
+                onChange={f('sin')}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="123-456-789"
+              />
+            </FormField>
+          </div>
+        </div>
+        <div className="mt-4">
+          <MultiFileUploader
+            files={data.idDocs}
+            onChange={(files) => onChange({ idDocs: files })}
+            accept=".jpg,.jpeg,.png,.heic,.pdf"
+            label={t.step2.idDocsLabel}
+            hint={t.step2.idDocsHint}
+            uploadLabel={t.step2.idDocsButton}
           />
         </div>
       </div>

@@ -5,6 +5,7 @@ import FormField from '@/components/FormField'
 import { useT, useLocale } from '@/lib/locale-context'
 import { tpl } from '@/lib/i18n'
 import MultiFileUploader from '@/components/MultiFileUploader'
+import SignaturePad from '@/components/SignaturePad'
 
 interface Props {
   data: FormData
@@ -91,7 +92,7 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
             <Row label={t.step8.rowChildren} value={data.children} />
             <Row label={t.step8.rowPets} value={data.pets} />
             <Row label={t.step8.rowViewedUnit} value={data.viewedUnit} />
-            <Row label={t.step8.rowShownBy} value={data.viewedByName} />
+            <Row label={t.step8.rowLeasingAgent} value={data.leasingAgent} />
           </ReviewCard>
 
           <ReviewCard title={t.step8.employmentCard}>
@@ -187,11 +188,33 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
         )}
       </div>
 
+      {/* Signature */}
+      <div className="form-section">
+        <h3 className="section-title">{t.step8.signatureTitle}</h3>
+        <p className="text-sm text-brand-gray mb-3">{t.step8.signatureIntro}</p>
+        <SignaturePad
+          value={data.signatureData}
+          onChange={(dataUrl) => onChange({
+            signatureData: dataUrl,
+            signedAt: dataUrl ? new Date().toISOString() : '',
+          })}
+          clearLabel={t.step8.signatureClear}
+        />
+        {(data.firstName || data.lastName) && (
+          <p className="text-xs text-brand-gray mt-2">
+            {t.step8.signatureSignedAs}: <span className="text-brand-dark" style={{ fontWeight: 600 }}>{`${data.firstName} ${data.lastName}`.trim()}</span>
+          </p>
+        )}
+        {errors.signatureData && (
+          <p className="text-xs text-secondary mt-2">{errors.signatureData}</p>
+        )}
+      </div>
+
       <div className="flex justify-center mt-6">
         <button
           type="button"
           onClick={onSubmit}
-          disabled={submitting || !data.termsAgreed}
+          disabled={submitting || !data.termsAgreed || !data.signatureData}
           className="btn-primary px-12 py-4 text-base min-w-[240px] flex items-center justify-center gap-2"
         >
           {submitting ? (

@@ -5,6 +5,7 @@ import FormField from '@/components/FormField'
 import { formatPhone } from '@/lib/utils'
 import { useT } from '@/lib/locale-context'
 import { tpl } from '@/lib/i18n'
+import DateInput from '@/components/DateInput'
 
 interface Props {
   data: FormData
@@ -60,7 +61,7 @@ function OccupantForm({
           <input type="tel" className="form-input" value={occ.phone} onChange={handlePhone} />
         </FormField>
         <FormField label={t.step2.dateOfBirth}>
-          <input type="date" className="form-input" value={occ.birthDate} onChange={f('birthDate')} />
+          <DateInput value={occ.birthDate} onChange={(v) => onUpdate({ birthDate: v })} />
         </FormField>
         <FormField label={t.step4.relationship}>
           <input className="form-input" value={occ.relationship} onChange={f('relationship')} placeholder={t.step4.relationshipPlaceholder} />

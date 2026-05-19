@@ -15,6 +15,15 @@ interface Props {
 
 const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th']
 
+// Vacancy board stores pets as raw dropdown values like "Cat", "Dog", "Y/Y",
+// or "No" that don't read well to applicants. Surface a friendlier label.
+function petsFriendly(raw: string): string {
+  if (!raw) return ''
+  const v = raw.trim().toUpperCase()
+  if (v === 'NO' || v === 'N' || v === 'NONE' || v === 'N/N' || v === '') return 'No pets'
+  return 'Pet-friendly'
+}
+
 function UnitRow({
   property,
   selectedRank,
@@ -28,12 +37,13 @@ function UnitRow({
 }) {
   const t = useT()
   const selected = selectedRank > 0
+  const petsLabel = petsFriendly(property.pets)
   const badges = [
     property.bedrooms,
     property.bathrooms,
     property.available ? `${t.step1.available}: ${property.available}` : '',
     property.parking ? `${t.step1.parking}: ${property.parking}` : '',
-    property.pets ? `${t.step1.pets}: ${property.pets}` : '',
+    petsLabel,
   ].filter(Boolean)
 
   return (
@@ -437,7 +447,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                   [t.step1.available, preview.available],
                   [t.step1.parking, preview.parking],
                   [t.step1.laundry, preview.laundry],
-                  [t.step1.pets, preview.pets],
+                  [t.step1.pets, petsFriendly(preview.pets)],
                   [t.step1.balcony, preview.balcony && preview.balcony !== 'No' ? t.common.yes : null],
                   [t.step1.floor, preview.floor],
                 ].filter(([, v]) => v).map(([label, val]) => (

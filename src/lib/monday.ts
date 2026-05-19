@@ -355,10 +355,16 @@ export async function createApplicationUpdate(
     `Children: ${data.children || 'None stated'}`,
     ...(data.childrenList && data.childrenList.length > 0
       ? data.childrenList
-          .filter((c) => c.name || c.birthDate)
-          .map((c) => `  · ${c.name || '—'}${c.birthDate ? ` (DOB: ${c.birthDate})` : ''}`)
+          .filter((c) => c.name || c.birthDate || c.gender)
+          .map((c) => {
+            const dob = c.birthDate ? ` (DOB: ${c.birthDate})` : ''
+            const gender = c.gender ? ` — ${c.gender}` : ''
+            return `  · ${c.name || '—'}${dob}${gender}`
+          })
       : []),
     `Pets: ${data.pets || 'None stated'}`,
+    ...(data.petNames ? [`Pet Name(s): ${data.petNames}`] : []),
+    ...(data.sin ? [`SIN: ${data.sin}`] : []),
     '',
     multi ? '<b>Primary Property (1st choice)</b>' : '<b>Property Applied For</b>',
     `Address: ${property?.address ?? ''} ${property?.unit ? `Unit ${property.unit}` : ''}, ${property?.city ?? ''}`,
@@ -371,7 +377,7 @@ export async function createApplicationUpdate(
     '',
     '<b>Unit Viewing</b>',
     `Viewed Unit: ${data.viewedUnit || '—'}`,
-    ...(data.viewedByName ? [`Shown By: ${data.viewedByName}`] : []),
+    `Leasing Agent: ${data.leasingAgent || '—'}`,
     '',
     '<b>Employment (Primary Applicant)</b>',
     `Employer Name: ${data.employerName || '—'}`,
@@ -429,6 +435,10 @@ export async function createApplicationUpdate(
 
   if (data.additionalDetails) {
     lines.push('', '<b>Additional Details from Applicant</b>', data.additionalDetails)
+  }
+
+  if (data.signedAt) {
+    lines.push('', '<b>Electronic Signature</b>', `Signed by ${data.firstName} ${data.lastName} on ${data.signedAt}. Signature image attached as a file on this item.`)
   }
 
   const body = lines.join('\n')

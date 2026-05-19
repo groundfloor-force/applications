@@ -89,25 +89,26 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
   label('Children', data.children || 'None')
   if (data.childrenList && data.childrenList.length > 0) {
     data.childrenList
-      .filter((c) => c.name || c.birthDate)
+      .filter((c) => c.name || c.birthDate || c.gender)
       .forEach((c) => {
-        label('  · Child', `${c.name || '—'}${c.birthDate ? ` (DOB: ${c.birthDate})` : ''}`)
+        const dob = c.birthDate ? ` (DOB: ${c.birthDate})` : ''
+        const gender = c.gender ? ` — ${c.gender}` : ''
+        label('  · Child', `${c.name || '—'}${dob}${gender}`)
       })
   }
   label('Pets', data.pets || 'None')
+  if (data.petNames) label('Pet Name(s)', data.petNames)
+  if (data.sin) label('SIN', data.sin)
   spacer()
 
   // Viewing
   heading('Unit Viewing')
   label('Viewed Unit', data.viewedUnit)
-  if (data.viewedByName) {
-    label('Shown By', data.viewedByName)
-  }
+  label('Leasing Agent', data.leasingAgent)
   spacer()
 
   // Leasing Details
   heading('Leasing Details')
-  label('Leasing Agent', data.leasingAgent)
   label('Monthly Rent', data.monthlyRent ? `$${data.monthlyRent}` : '—')
   label('Security Deposit', data.securityDeposit ? `$${data.securityDeposit}` : '—')
   label('Move-In Date', data.moveInDate)
@@ -193,6 +194,29 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
     checkPage(lines.length * 5)
     doc.text(lines, margin, y)
     y += lines.length * 5
+  }
+
+  // Signature
+  if (data.signatureData) {
+    checkPage(60)
+    heading('Signature')
+    try {
+      const sigW = 80
+      const sigH = 30
+      doc.addImage(data.signatureData, 'PNG', margin, y, sigW, sigH)
+      y += sigH + 4
+    } catch {
+      // ignore image failures so PDF still generates
+    }
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60, 60, 60)
+    doc.text(
+      `Signed by ${data.firstName} ${data.lastName}${data.signedAt ? ` on ${data.signedAt}` : ''}`.trim(),
+      margin,
+      y
+    )
+    y += 6
   }
 
   // Convert to Buffer

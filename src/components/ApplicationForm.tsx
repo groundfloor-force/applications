@@ -33,13 +33,14 @@ function validate(step: number, data: FormData, v: ValidationMessages): Record<s
     if (!data.phone.trim()) e.phone = v.phoneRequired
     if (!data.currentAddress.trim()) e.currentAddress = v.streetRequired
     if (!data.currentCity.trim()) e.currentCity = v.cityRequired
+    if (!data.currentProvince.trim()) e.currentProvince = v.provinceRequired
     if (!data.birthDate) e.birthDate = v.birthDateRequired
     if (!data.children.trim()) e.children = v.childrenRequired
     if (!data.viewedUnit) e.viewedUnit = v.viewedRequired
+    if (!data.leasingAgent.trim()) e.leasingAgent = v.leasingAgentRequired
   }
 
   if (step === 3) {
-    if (!data.leasingAgent.trim()) e.leasingAgent = v.leasingAgentRequired
     if (!data.monthlyRent) e.monthlyRent = v.monthlyRentRequired
     if (!data.securityDeposit) e.securityDeposit = v.securityDepositRequired
     if (!data.moveInDate) e.moveInDate = v.moveInRequired
@@ -75,6 +76,7 @@ function validate(step: number, data: FormData, v: ValidationMessages): Record<s
   // so we don't block the applicant earlier if they leave the section blank.
   if (step === 8) {
     if (!data.termsAgreed) e.termsAgreed = v.termsRequired
+    if (!data.signatureData) e.signatureData = v.signatureRequired
     const cosignerStarted = !!(
       data.cosignerFirstName ||
       data.cosignerLastName ||
@@ -130,9 +132,12 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
   currentProvince: 'NB',
   currentPostal: 'E1C 1B2',
   children: '1',
-  childrenList: [{ name: 'Sophie Tester', birthDate: '2020-06-10' }],
+  childrenList: [{ name: 'Sophie Tester', birthDate: '2020-06-10', gender: 'Female' }],
   pets: '1 cat',
+  petNames: 'Whiskers',
   petPhotos: [],
+  sin: '',
+  idDocs: [],
   leasingAgent: 'Sarah Jones',
   securityDeposit: '1350',
   monthlyRent: '1350',
@@ -140,7 +145,6 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
   numVehicles: '2',
   moveInDate: '2025-08-01',
   viewedUnit: 'Yes - In Person',
-  viewedByName: 'Sarah Jones',
   occupants: [
     {
       firstName: 'Daniel',
@@ -248,6 +252,8 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
   supportingDocs: [],
   additionalDetails: 'TEST APPLICATION — please delete. We are a quiet, responsible family and have excellent rental history.',
   termsAgreed: true,
+  signatureData: '',
+  signedAt: '',
 }
 
 export default function ApplicationForm({ config, autofill }: Props) {
@@ -270,6 +276,14 @@ export default function ApplicationForm({ config, autofill }: Props) {
       setSavedBanner({ step: saved.step, savedAt: saved.savedAt })
     }
   }, [autofill])
+
+  // Scroll to top whenever the step changes. Doing this in an effect (rather
+  // than inline after setState) ensures the new step content has been
+  // committed to the DOM before the scroll happens; otherwise smooth-scroll
+  // can race against layout and not reach the top.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [step])
 
   // Autosave debounced on data/step changes
   useEffect(() => {
@@ -331,14 +345,12 @@ export default function ApplicationForm({ config, autofill }: Props) {
     setErrors({})
     setTouched(new Set())
     setStep((s) => Math.min(s + 1, TOTAL_STEPS))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleBack = () => {
     setErrors({})
     setTouched(new Set())
     setStep((s) => Math.max(s - 1, 1))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Jump to a step from the progress bar — only allowed for completed (earlier) steps.
@@ -349,7 +361,6 @@ export default function ApplicationForm({ config, autofill }: Props) {
     setErrors({})
     setTouched(new Set())
     setStep(targetStep)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSubmit = async () => {
@@ -366,7 +377,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
       const formPayload = new FormData()
 
       // Serialize everything except File arrays
-      const { documents, occupantDocs, petPhotos, cosignerDocs, supportingDocs, ...rest } = data
+      const { documents, occupantDocs, petPhotos, cosignerDocs, supportingDocs, idDocs, ...rest } = data
       formPayload.append('data', JSON.stringify(rest))
       formPayload.append('locale', locale)
 
@@ -395,6 +406,11 @@ export default function ApplicationForm({ config, autofill }: Props) {
       // Supporting documents (Review step)
       supportingDocs.forEach((file, i) => {
         formPayload.append(`supdoc_${i}`, file, file.name)
+      })
+
+      // Government photo ID (optional)
+      idDocs.forEach((file, i) => {
+        formPayload.append(`iddoc_${i}`, file, file.name)
       })
 
       const res = await fetch('/api/submit', { method: 'POST', body: formPayload })

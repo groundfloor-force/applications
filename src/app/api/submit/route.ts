@@ -48,6 +48,25 @@ export async function POST(req: NextRequest) {
         fileBuffers.push({ buffer: buf, name: value.name, type, label: `Cosigner_${cName}` })
       } else if (key.startsWith('supdoc_')) {
         fileBuffers.push({ buffer: buf, name: value.name, type, label: `${baseName}_Supporting` })
+      } else if (key.startsWith('iddoc_')) {
+        fileBuffers.push({ buffer: buf, name: value.name, type, label: `${baseName}_PhotoID` })
+      }
+    }
+
+    // Signature is sent as a base64 data URL in the JSON payload; convert to
+    // a PNG attachment so PMs see it in the Monday files column.
+    if (data.signatureData && data.signatureData.startsWith('data:image/')) {
+      const match = data.signatureData.match(/^data:(image\/\w+);base64,(.+)$/)
+      if (match) {
+        const sigType = match[1]
+        const sigBuf = Buffer.from(match[2], 'base64')
+        const ext = sigType === 'image/png' ? 'png' : sigType.split('/')[1] || 'png'
+        fileBuffers.push({
+          buffer: sigBuf,
+          name: `signature.${ext}`,
+          type: sigType,
+          label: `${baseName}_Signature`,
+        })
       }
     }
 

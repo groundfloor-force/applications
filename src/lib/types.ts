@@ -21,6 +21,7 @@ export interface Property {
 export interface ChildDetail {
   name: string
   birthDate: string
+  gender: string
 }
 
 export interface Occupant {
@@ -77,7 +78,10 @@ export interface FormData {
   children: string
   childrenList: ChildDetail[]
   pets: string
+  petNames: string
   petPhotos: File[]
+  sin: string
+  idDocs: File[]
 
   // Step 3 – Household Details
   leasingAgent: string
@@ -87,7 +91,6 @@ export interface FormData {
   numVehicles: string
   moveInDate: string
   viewedUnit: string
-  viewedByName: string
 
   // Step 4 – Additional Occupants
   occupants: Occupant[]
@@ -123,6 +126,8 @@ export interface FormData {
   supportingDocs: File[]
   additionalDetails: string
   termsAgreed: boolean
+  signatureData: string
+  signedAt: string
 }
 
 export interface FormConfig {
@@ -183,7 +188,10 @@ export const initialFormData: FormData = {
   children: '',
   childrenList: [],
   pets: '',
+  petNames: '',
   petPhotos: [],
+  sin: '',
+  idDocs: [],
   leasingAgent: '',
   securityDeposit: '',
   monthlyRent: '',
@@ -191,7 +199,6 @@ export const initialFormData: FormData = {
   numVehicles: '',
   moveInDate: '',
   viewedUnit: '',
-  viewedByName: '',
   occupants: [],
   prevLandlordFirstName: '',
   prevLandlordLastName: '',
@@ -217,4 +224,6 @@ export const initialFormData: FormData = {
   supportingDocs: [],
   additionalDetails: '',
   termsAgreed: false,
+  signatureData: '',
+  signedAt: '',
 }

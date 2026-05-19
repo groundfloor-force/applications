@@ -12,6 +12,7 @@ interface Props {
   label?: string
   hint?: string
   compact?: boolean
+  uploadLabel?: string
 }
 
 export default function MultiFileUploader({
@@ -21,6 +22,7 @@ export default function MultiFileUploader({
   label,
   hint,
   compact = false,
+  uploadLabel,
 }: Props) {
   const t = useT()
 
@@ -91,7 +93,7 @@ export default function MultiFileUploader({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
           )}
-          {files.length === 0 ? t.step6.incomeDocs : t.step6.addAnother}
+          {files.length === 0 ? (uploadLabel ?? t.step6.incomeDocs) : t.step6.addAnother}
         </span>
         {!compact && (
           <p className="text-[11px] text-brand-gray mt-1">PDF, JPG, PNG, DOCX — max {MAX_MB} MB</p>
