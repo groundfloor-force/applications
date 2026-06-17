@@ -634,18 +634,18 @@ export default function ApplicationForm({ config, autofill }: Props) {
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-between items-center mt-10 pt-6 border-t border-brand-border">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-0 sm:justify-between sm:items-center mt-10 pt-6 border-t border-brand-border">
                 <button
                   type="button"
                   onClick={handleBack}
                   disabled={step <= 1}
-                  className="btn-secondary disabled:opacity-30"
+                  className="btn-secondary disabled:opacity-30 w-full sm:w-auto"
                 >
                   {t.common.back}
                 </button>
 
                 {step < TOTAL_STEPS && (
-                  <button type="button" onClick={handleNext} className="btn-primary">
+                  <button type="button" onClick={handleNext} className="btn-primary w-full sm:w-auto">
                     {t.common.continue}
                     <svg className="w-4 h-4 ml-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />

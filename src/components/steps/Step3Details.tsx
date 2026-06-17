@@ -71,15 +71,15 @@ export default function Step3Details({ data, onChange, errors }: Props) {
         <h3 className="section-title">{t.step3.leasingDetails}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label={t.step3.monthlyRent} required error={errors.monthlyRent}>
-            <input type="number" className="form-input" value={data.monthlyRent}
-              onChange={handleRentChange}
-              onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
+            <input type="text" inputMode="decimal" autoComplete="off"
+              className="form-input" value={data.monthlyRent}
+              onChange={handleRentChange} placeholder="1500" />
           </FormField>
           <FormField label={t.step3.securityDeposit} required error={errors.securityDeposit}
             hint={t.step3.securityDepositHint}>
-            <input type="number" className="form-input" value={data.securityDeposit}
-              onChange={handleDepositChange}
-              onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1500" />
+            <input type="text" inputMode="decimal" autoComplete="off"
+              className="form-input" value={data.securityDeposit}
+              onChange={handleDepositChange} placeholder="1500" />
           </FormField>
           <div className="sm:col-span-2">
             <FormField label={t.step3.moveInDate} required error={errors.moveInDate} hint={t.step3.moveInHint}>
@@ -112,7 +112,8 @@ export default function Step3Details({ data, onChange, errors }: Props) {
             </select>
           </FormField>
           <FormField label={t.step3.numVehicles} required error={errors.numVehicles}>
-            <input className="form-input" value={data.numVehicles} onChange={f('numVehicles')} placeholder="0" />
+            <input className="form-input" inputMode="numeric" autoComplete="off"
+              value={data.numVehicles} onChange={f('numVehicles')} placeholder="0" />
           </FormField>
         </div>
 

@@ -15,13 +15,13 @@ export default async function ApplyLanguagePicker({
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col">
       <header className="bg-white border-b border-brand-border">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center">
+        <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 flex items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={config.logoUrl} alt={config.companyName} className="h-12 object-contain" />
+          <img src={config.logoUrl} alt={config.companyName} className="h-9 sm:h-12 object-contain" />
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-16">
+      <main className="flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
         <div className="max-w-md w-full">
           {!config.formOpen ? (
             <div className="text-center">

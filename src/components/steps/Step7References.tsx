@@ -38,17 +38,21 @@ export default function Step7References({ data, onChange, errors, onFieldBlur }:
         <p className="text-xs text-brand-gray mb-4">{t.step7.referenceSub}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label={t.common.firstName}>
-            <input className="form-input" value={data.ref1FirstName} onChange={f('ref1FirstName')} />
+            <input className="form-input" autoCapitalize="words"
+              value={data.ref1FirstName} onChange={f('ref1FirstName')} />
           </FormField>
           <FormField label={t.common.lastName}>
-            <input className="form-input" value={data.ref1LastName} onChange={f('ref1LastName')} />
+            <input className="form-input" autoCapitalize="words"
+              value={data.ref1LastName} onChange={f('ref1LastName')} />
           </FormField>
           <FormField label={t.common.phone}>
-            <input type="tel" className="form-input" value={data.ref1Phone}
+            <input type="tel" inputMode="tel"
+              className="form-input" value={data.ref1Phone}
               onChange={(e) => onChange({ ref1Phone: formatPhone(e.target.value) })} />
           </FormField>
           <FormField label={t.common.email}>
-            <input type="email" className="form-input" value={data.ref1Email} onChange={f('ref1Email')} />
+            <input type="email" inputMode="email" autoCapitalize="off" spellCheck={false}
+              className="form-input" value={data.ref1Email} onChange={f('ref1Email')} />
           </FormField>
         </div>
       </div>
@@ -60,20 +64,25 @@ export default function Step7References({ data, onChange, errors, onFieldBlur }:
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label={t.common.firstName}>
-            <input className="form-input" value={data.cosignerFirstName} onChange={f('cosignerFirstName')} />
+            <input className="form-input" autoCapitalize="words"
+              value={data.cosignerFirstName} onChange={f('cosignerFirstName')} />
           </FormField>
           <FormField label={t.common.lastName}>
-            <input className="form-input" value={data.cosignerLastName} onChange={f('cosignerLastName')} />
+            <input className="form-input" autoCapitalize="words"
+              value={data.cosignerLastName} onChange={f('cosignerLastName')} />
           </FormField>
           <FormField label={t.step7.relationship}>
-            <input className="form-input" value={data.cosignerRelationship} onChange={f('cosignerRelationship')} placeholder={t.step7.relationshipPlaceholder} />
+            <input className="form-input" autoCapitalize="words"
+              value={data.cosignerRelationship} onChange={f('cosignerRelationship')} placeholder={t.step7.relationshipPlaceholder} />
           </FormField>
-          <div />
+          <div className="hidden sm:block" />
           <FormField label={t.common.email} required={cosignerStarted} error={cosignerStarted ? errors.cosignerEmail : undefined}>
-            <input type="email" className="form-input" value={data.cosignerEmail} onChange={f('cosignerEmail')} />
+            <input type="email" inputMode="email" autoCapitalize="off" spellCheck={false}
+              className="form-input" value={data.cosignerEmail} onChange={f('cosignerEmail')} />
           </FormField>
           <FormField label={t.common.phone}>
-            <input type="tel" className="form-input" value={data.cosignerPhone}
+            <input type="tel" inputMode="tel"
+              className="form-input" value={data.cosignerPhone}
               onChange={(e) => onChange({ cosignerPhone: formatPhone(e.target.value) })} />
           </FormField>
         </div>

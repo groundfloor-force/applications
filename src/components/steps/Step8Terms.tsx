@@ -28,9 +28,9 @@ function ReviewCard({ title, children }: { title: string; children: React.ReactN
 function Row({ label, value }: { label: string; value?: string | number | null }) {
   if (!value && value !== 0) return null
   return (
-    <div className="flex justify-between gap-4 text-sm">
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:gap-4 text-sm">
       <span className="text-brand-gray flex-shrink-0">{label}</span>
-      <span className="text-brand text-right" style={{ fontWeight: 700 }}>{value}</span>
+      <span className="text-brand sm:text-right break-words" style={{ fontWeight: 700 }}>{value}</span>
     </div>
   )
 }
@@ -167,7 +167,7 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
       {/* Terms */}
       <div className="form-section">
         <h3 className="section-title">{t.step8.termsTitle}</h3>
-        <div className="bg-brand-bg border border-brand-border  p-4 max-h-64 overflow-y-auto text-sm text-brand leading-relaxed whitespace-pre-wrap mb-4 terms-scroll">
+        <div className="bg-brand-bg border border-brand-border p-4 max-h-48 sm:max-h-64 overflow-y-auto text-sm text-brand leading-relaxed whitespace-pre-wrap mb-4 terms-scroll">
           {termsText}
         </div>
 
@@ -215,7 +215,7 @@ export default function Step8Terms({ data, onChange, errors, config, submitting,
           type="button"
           onClick={onSubmit}
           disabled={submitting || !data.termsAgreed || !data.signatureData}
-          className="btn-primary px-12 py-4 text-base min-w-[240px] flex items-center justify-center gap-2"
+          className="btn-primary px-6 sm:px-12 py-4 text-base w-full sm:w-auto sm:min-w-[240px] flex items-center justify-center gap-2"
         >
           {submitting ? (
             <>

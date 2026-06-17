@@ -17,23 +17,23 @@ export default async function SuccessPage({
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col">
       <header className="bg-white border-b border-brand-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={config.logoUrl} alt={config.companyName} className="h-12 object-contain" />
+          <img src={config.logoUrl} alt={config.companyName} className="h-9 sm:h-12 object-contain" />
           <a
             href="https://www.groundfloorpm.com"
-            className="text-sm text-primary-500 hover:underline"
+            className="text-xs sm:text-sm text-primary-500 hover:underline flex-shrink-0"
           >
             {t.success.returnHome} →
           </a>
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-6 py-10 animate-fade-up">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 animate-fade-up">
         {/* Hero band — full width, left aligned */}
-        <div className="flex items-start gap-5 mb-10">
-          <div className="flex-shrink-0 w-16 h-16 bg-green-100 flex items-center justify-center">
-            <svg className="w-9 h-9 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="flex items-start gap-3 sm:gap-5 mb-8 sm:mb-10">
+          <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 bg-green-100 flex items-center justify-center">
+            <svg className="w-7 h-7 sm:w-9 sm:h-9 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
           </div>
@@ -41,10 +41,10 @@ export default async function SuccessPage({
             <p className="text-xs uppercase tracking-widest text-brand-gray mb-1" style={{ fontWeight: 600 }}>
               {t.common.rentalApplication}
             </p>
-            <h1 className="text-3xl sm:text-4xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
+            <h1 className="text-2xl sm:text-4xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
               {t.success.title}
             </h1>
-            <p className="text-brand-dark">
+            <p className="text-sm sm:text-base text-brand-dark">
               {t.success.thankYou}{' '}
               <strong className="text-primary-500">{config.companyName}</strong>.{' '}
               <span className="text-brand-gray">{t.success.received}</span>
@@ -56,12 +56,12 @@ export default async function SuccessPage({
           {/* LEFT — what's next + if approved */}
           <div className="space-y-6 min-w-0">
             <div className="bg-white border border-brand-border">
-              <div className="px-6 py-4 border-b border-brand-border bg-brand-bg">
+              <div className="px-4 sm:px-6 py-4 border-b border-brand-border bg-brand-bg">
                 <h2 className="text-sm uppercase tracking-widest text-brand-gray" style={{ fontWeight: 700 }}>
                   {t.success.whatNext}
                 </h2>
               </div>
-              <ol className="px-6 py-5 space-y-3 text-sm text-brand-dark">
+              <ol className="px-4 sm:px-6 py-5 space-y-3 text-sm text-brand-dark">
                 {[t.success.next1, t.success.next2, t.success.next3, t.success.next4].map((step, i) => (
                   <li key={i} className="flex gap-3">
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-500 text-white flex items-center justify-center text-xs" style={{ fontWeight: 700 }}>
@@ -74,12 +74,12 @@ export default async function SuccessPage({
             </div>
 
             <div className="bg-primary-50 border border-primary-200">
-              <div className="px-6 py-4 border-b border-primary-200">
+              <div className="px-4 sm:px-6 py-4 border-b border-primary-200">
                 <h2 className="text-sm uppercase tracking-widest text-primary-700" style={{ fontWeight: 700 }}>
                   {t.success.prepareTitle}
                 </h2>
               </div>
-              <ul className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-primary-700">
+              <ul className="px-4 sm:px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-primary-700">
                 {[t.success.prepare1, t.success.prepare2, t.success.prepare3, t.success.prepare4].map((item, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <svg className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,12 +96,12 @@ export default async function SuccessPage({
           <div className="lg:sticky lg:top-6 lg:self-start space-y-6">
             {token ? (
               <div className="bg-white border-2 border-primary-300">
-                <div className="px-6 py-4 border-b border-primary-200 bg-primary-50">
+                <div className="px-4 sm:px-6 py-4 border-b border-primary-200 bg-primary-50">
                   <h2 className="text-sm uppercase tracking-widest text-primary-700" style={{ fontWeight: 700 }}>
                     {t.success.trackTitle}
                   </h2>
                 </div>
-                <div className="px-6 py-5">
+                <div className="px-4 sm:px-6 py-5">
                   <p className="text-sm text-brand-dark mb-5 leading-relaxed">
                     {t.success.trackHint}
                   </p>
@@ -119,7 +119,7 @@ export default async function SuccessPage({
               </div>
             ) : null}
 
-            <div className="bg-white border border-brand-border px-6 py-5">
+            <div className="bg-white border border-brand-border px-4 sm:px-6 py-5">
               <p className="text-xs text-brand-gray leading-relaxed">
                 {locale === 'fr'
                   ? 'Une question? Visitez '
@@ -135,7 +135,7 @@ export default async function SuccessPage({
       </main>
 
       <footer className="border-t border-brand-border bg-white py-6">
-        <div className="max-w-7xl mx-auto px-6 text-sm text-brand-gray flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-sm text-brand-gray flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span>&copy; {new Date().getFullYear()} {config.companyName}.</span>
           <a href="https://www.groundfloorpm.com" className="text-primary-500 hover:underline">
             groundfloorpm.com

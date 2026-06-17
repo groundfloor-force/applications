@@ -13,6 +13,9 @@ interface Props {
   hint?: string
   compact?: boolean
   uploadLabel?: string
+  // When true, on mobile the file picker opens the camera directly.
+  // Use for pet photos / ID where snapping a photo is the expected flow.
+  capture?: boolean
 }
 
 export default function MultiFileUploader({
@@ -23,6 +26,7 @@ export default function MultiFileUploader({
   hint,
   compact = false,
   uploadLabel,
+  capture = false,
 }: Props) {
   const t = useT()
 
@@ -98,7 +102,14 @@ export default function MultiFileUploader({
         {!compact && (
           <p className="text-[11px] text-brand-gray mt-1">PDF, JPG, PNG, DOCX — max {MAX_MB} MB</p>
         )}
-        <input type="file" className="sr-only" accept={accept} multiple onChange={handleFiles} />
+        <input
+          type="file"
+          className="sr-only"
+          accept={accept}
+          multiple
+          onChange={handleFiles}
+          {...(capture ? { capture: 'environment' as const } : {})}
+        />
       </label>
     </div>
   )

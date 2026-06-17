@@ -60,18 +60,22 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label={t.common.firstName} required error={err('firstName')}>
             <input className="form-input" value={data.firstName}
+              autoComplete="given-name" autoCapitalize="words"
               onChange={f('firstName')} onBlur={blur('firstName')} />
           </FormField>
           <FormField label={t.common.lastName} required error={err('lastName')}>
             <input className="form-input" value={data.lastName}
+              autoComplete="family-name" autoCapitalize="words"
               onChange={f('lastName')} onBlur={blur('lastName')} />
           </FormField>
           <FormField label={t.common.email} required error={err('email')}>
-            <input type="email" className="form-input" value={data.email}
+            <input type="email" inputMode="email" autoComplete="email" autoCapitalize="off" spellCheck={false}
+              className="form-input" value={data.email}
               onChange={f('email')} onBlur={blur('email')} placeholder="you@example.com" />
           </FormField>
           <FormField label={t.common.phone} required error={err('phone')}>
-            <input type="tel" className="form-input" value={data.phone}
+            <input type="tel" inputMode="tel" autoComplete="tel"
+              className="form-input" value={data.phone}
               onChange={handlePhone} onBlur={blur('phone')} placeholder="(506) 555-0100" />
           </FormField>
           <FormField label={t.step2.dateOfBirth} required error={err('birthDate')}>
@@ -79,6 +83,7 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
               value={data.birthDate}
               onChange={(v) => onChange({ birthDate: v })}
               onBlur={blur('birthDate')}
+              autoComplete="bday"
             />
           </FormField>
         </div>
@@ -90,21 +95,25 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           <div className="sm:col-span-2">
             <FormField label={t.common.addressFull} required error={err('currentAddress')}>
               <input className="form-input" value={data.currentAddress}
+                autoComplete="street-address" autoCapitalize="words"
                 onChange={f('currentAddress')} onBlur={blur('currentAddress')} />
             </FormField>
           </div>
           <div className="sm:col-span-2">
             <FormField label={t.step2.addressLine2} hint={t.step2.addressLine2Hint}>
               <input className="form-input" value={data.currentAddressLine2}
+                autoComplete="address-line2" autoCapitalize="words"
                 onChange={f('currentAddressLine2')} />
             </FormField>
           </div>
           <FormField label={t.common.city} required error={err('currentCity')}>
             <input className="form-input" value={data.currentCity}
+              autoComplete="address-level2" autoCapitalize="words"
               onChange={f('currentCity')} onBlur={blur('currentCity')} />
           </FormField>
           <FormField label={t.common.province} required error={err('currentProvince')}>
             <select className="form-input" value={data.currentProvince}
+              autoComplete="address-level1"
               onChange={f('currentProvince')} onBlur={blur('currentProvince')}>
               <option value="">{t.common.selectEllipsis}</option>
               {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -112,6 +121,7 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           </FormField>
           <FormField label={t.common.postal}>
             <input className="form-input" value={data.currentPostal}
+              autoComplete="postal-code" autoCapitalize="characters"
               onChange={f('currentPostal')} placeholder="E1A 1A1" />
           </FormField>
         </div>
@@ -164,53 +174,57 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           <p className="text-xs text-brand-gray mb-3">{t.step2.childDetailsHint}</p>
 
           {data.childrenList.length > 0 && (
-            <div className="space-y-3 mb-3">
+            <div className="space-y-4 mb-3">
               {data.childrenList.map((child, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_160px_160px_auto] gap-3 items-end">
-                  <FormField label={t.step2.childName}>
-                    <input
-                      className="form-input"
-                      value={child.name}
-                      onChange={(e) => {
-                        const next = [...data.childrenList]
-                        next[i] = { ...next[i], name: e.target.value }
-                        onChange({ childrenList: next })
-                      }}
-                    />
-                  </FormField>
-                  <FormField label={t.step2.childBirthDate}>
-                    <DateInput
-                      value={child.birthDate}
-                      onChange={(v) => {
-                        const next = [...data.childrenList]
-                        next[i] = { ...next[i], birthDate: v }
-                        onChange({ childrenList: next })
-                      }}
-                    />
-                  </FormField>
-                  <FormField label={t.step2.childGender}>
-                    <select
-                      className="form-input"
-                      value={child.gender}
-                      onChange={(e) => {
-                        const next = [...data.childrenList]
-                        next[i] = { ...next[i], gender: e.target.value }
-                        onChange({ childrenList: next })
-                      }}
+                <div key={i} className="border border-brand-border bg-brand-bg p-3 sm:p-0 sm:bg-transparent sm:border-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_auto] gap-3 items-end">
+                    <FormField label={t.step2.childName}>
+                      <input
+                        className="form-input"
+                        autoCapitalize="words"
+                        value={child.name}
+                        onChange={(e) => {
+                          const next = [...data.childrenList]
+                          next[i] = { ...next[i], name: e.target.value }
+                          onChange({ childrenList: next })
+                        }}
+                      />
+                    </FormField>
+                    <FormField label={t.step2.childBirthDate}>
+                      <DateInput
+                        value={child.birthDate}
+                        onChange={(v) => {
+                          const next = [...data.childrenList]
+                          next[i] = { ...next[i], birthDate: v }
+                          onChange({ childrenList: next })
+                        }}
+                      />
+                    </FormField>
+                    <FormField label={t.step2.childGender}>
+                      <select
+                        className="form-input"
+                        value={child.gender}
+                        onChange={(e) => {
+                          const next = [...data.childrenList]
+                          next[i] = { ...next[i], gender: e.target.value }
+                          onChange({ childrenList: next })
+                        }}
+                      >
+                        <option value="">{t.common.selectEllipsis}</option>
+                        <option value="Male">{t.step2.childGenderMale}</option>
+                        <option value="Female">{t.step2.childGenderFemale}</option>
+                        <option value="Other">{t.step2.childGenderOther}</option>
+                      </select>
+                    </FormField>
+                    <button
+                      type="button"
+                      onClick={() => onChange({ childrenList: data.childrenList.filter((_, j) => j !== i) })}
+                      className="h-11 sm:h-[56px] px-3 text-sm text-secondary hover:bg-red-50 border border-red-200 sm:border-0 sm:hover:underline whitespace-nowrap self-end"
+                      style={{ fontWeight: 600 }}
                     >
-                      <option value="">{t.common.selectEllipsis}</option>
-                      <option value="Male">{t.step2.childGenderMale}</option>
-                      <option value="Female">{t.step2.childGenderFemale}</option>
-                      <option value="Other">{t.step2.childGenderOther}</option>
-                    </select>
-                  </FormField>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ childrenList: data.childrenList.filter((_, j) => j !== i) })}
-                    className="h-[56px] px-3 text-sm text-secondary hover:underline whitespace-nowrap self-end"
-                  >
-                    {t.step2.removeChild}
-                  </button>
+                      {t.step2.removeChild}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -241,10 +255,11 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           <MultiFileUploader
             files={data.petPhotos}
             onChange={(files) => onChange({ petPhotos: files })}
-            accept=".jpg,.jpeg,.png,.heic,.pdf"
+            accept="image/*,.heic,.pdf"
             label={t.step2.petPhotoLabel}
             hint={t.step2.petPhotoHint}
             uploadLabel={t.step2.petPhotoButton}
+            capture
           />
         </div>
       </div>
@@ -271,10 +286,11 @@ export default function Step2Applicant({ data, onChange, errors, onFieldBlur }: 
           <MultiFileUploader
             files={data.idDocs}
             onChange={(files) => onChange({ idDocs: files })}
-            accept=".jpg,.jpeg,.png,.heic,.pdf"
+            accept="image/*,.heic,.pdf"
             label={t.step2.idDocsLabel}
             hint={t.step2.idDocsHint}
             uploadLabel={t.step2.idDocsButton}
+            capture
           />
         </div>
       </div>

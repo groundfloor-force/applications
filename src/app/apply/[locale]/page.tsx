@@ -32,12 +32,12 @@ export default async function ApplyLocalizedPage({
     <LocaleProvider locale={locale}>
       <div className="min-h-screen bg-brand-bg">
         <header className="bg-white border-b border-brand-border sticky top-0 z-10">
-          <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.logoUrl} alt={config.companyName} className="h-12 object-contain" />
+            <img src={config.logoUrl} alt={config.companyName} className="h-9 sm:h-12 object-contain" />
             <Link
               href={`/apply/${otherLocale}${autofill ? '?autofill=1' : ''}`}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-brand-gray hover:text-primary-500 hover:bg-primary-50 border border-brand-border hover:border-primary-300 transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-brand-gray hover:text-primary-500 hover:bg-primary-50 border border-brand-border hover:border-primary-300 transition-colors flex-shrink-0"
               title={`Switch to ${otherLabel}`}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,7 +48,7 @@ export default async function ApplyLocalizedPage({
           </div>
         </header>
 
-        <main className="max-w-5xl mx-auto px-4 py-10">
+        <main className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
           {!config.formOpen ? (
             <div className="max-w-lg mx-auto text-center py-20">
               <div className="text-brand-gray mb-6">

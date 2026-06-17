@@ -333,7 +333,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                     disabled={i === 0}
                     aria-label={t.step1.moveUp}
                     title={t.step1.moveUp}
-                    className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                    className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -345,7 +345,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                     disabled={i === properties.length - 1}
                     aria-label={t.step1.moveDown}
                     title={t.step1.moveDown}
-                    className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                    className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-brand-gray hover:text-primary-500 hover:bg-primary-50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -356,7 +356,7 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
                     onClick={() => toggleProperty(p)}
                     aria-label={t.step1.remove}
                     title={t.step1.remove}
-                    className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-secondary hover:bg-red-50 transition-colors"
+                    className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center text-brand-gray hover:text-secondary hover:bg-red-50 transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -399,9 +399,12 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
 
       {/* Property detail modal */}
       {preview && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4">
-          <div className="bg-white w-full sm:max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="relative h-44 bg-brand-bg flex-shrink-0">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="bg-white w-full sm:max-w-md shadow-2xl overflow-hidden max-h-[88dvh] sm:max-h-[90vh] flex flex-col">
+            <div className="relative h-32 sm:h-44 bg-brand-bg flex-shrink-0">
               {preview.pictureUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={preview.pictureUrl} alt={preview.address} className="w-full h-full object-cover"

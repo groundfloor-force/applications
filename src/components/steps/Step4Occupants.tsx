@@ -49,28 +49,36 @@ function OccupantForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <FormField label={t.common.firstName} required error={errKey('firstName')}>
-          <input className="form-input" value={occ.firstName} onChange={f('firstName')} />
+          <input className="form-input" autoComplete="off" autoCapitalize="words"
+            value={occ.firstName} onChange={f('firstName')} />
         </FormField>
         <FormField label={t.common.lastName} required error={errKey('lastName')}>
-          <input className="form-input" value={occ.lastName} onChange={f('lastName')} />
+          <input className="form-input" autoComplete="off" autoCapitalize="words"
+            value={occ.lastName} onChange={f('lastName')} />
         </FormField>
         <FormField label={t.common.email} required error={errKey('email')}>
-          <input type="email" className="form-input" value={occ.email} onChange={f('email')} />
+          <input type="email" inputMode="email" autoComplete="off" autoCapitalize="off" spellCheck={false}
+            className="form-input" value={occ.email} onChange={f('email')} />
         </FormField>
         <FormField label={t.common.phone} required error={errKey('phone')}>
-          <input type="tel" className="form-input" value={occ.phone} onChange={handlePhone} />
+          <input type="tel" inputMode="tel" autoComplete="off"
+            className="form-input" value={occ.phone} onChange={handlePhone} />
         </FormField>
         <FormField label={t.step2.dateOfBirth}>
           <DateInput value={occ.birthDate} onChange={(v) => onUpdate({ birthDate: v })} />
         </FormField>
         <FormField label={t.step4.relationship}>
-          <input className="form-input" value={occ.relationship} onChange={f('relationship')} placeholder={t.step4.relationshipPlaceholder} />
+          <input className="form-input" autoCapitalize="words"
+            value={occ.relationship} onChange={f('relationship')} placeholder={t.step4.relationshipPlaceholder} />
         </FormField>
         <FormField label={t.step4.occupation} required error={errKey('occupation')}>
-          <input className="form-input" value={occ.occupation} onChange={f('occupation')} placeholder={t.step4.occupationPlaceholder} />
+          <input className="form-input" autoCapitalize="words"
+            value={occ.occupation} onChange={f('occupation')} placeholder={t.step4.occupationPlaceholder} />
         </FormField>
         <FormField label={t.step4.monthlyGross}>
-          <input type="number" className="form-input" value={occ.monthlyGrossSalary} onChange={f('monthlyGrossSalary')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="3000" />
+          <input type="text" inputMode="decimal" autoComplete="off"
+            className="form-input" value={occ.monthlyGrossSalary} onChange={f('monthlyGrossSalary')}
+            placeholder="3000" />
         </FormField>
       </div>
 
@@ -82,27 +90,33 @@ function OccupantForm({
         <div className="sm:col-span-2">
           <FormField label={t.step4.employerName} required error={errKey('employerName')}
             hint={t.step4.employerNameHint}>
-            <input className="form-input" value={occ.employerName} onChange={f('employerName')} />
+            <input className="form-input" autoCapitalize="words"
+              value={occ.employerName} onChange={f('employerName')} />
           </FormField>
         </div>
         <FormField label={t.step4.positionHeld}>
-          <input className="form-input" value={occ.positionHeld} onChange={f('positionHeld')} />
+          <input className="form-input" autoCapitalize="words"
+            value={occ.positionHeld} onChange={f('positionHeld')} />
         </FormField>
         <FormField label={t.step4.employerPhone}>
-          <input type="tel" className="form-input" value={occ.employerPhone} onChange={handleEmployerPhone} />
+          <input type="tel" inputMode="tel"
+            className="form-input" value={occ.employerPhone} onChange={handleEmployerPhone} />
         </FormField>
         <div className="sm:col-span-2">
           <FormField label={t.step4.employerStreet} required error={errKey('employerAddress')}>
-            <input className="form-input" value={occ.employerAddress} onChange={f('employerAddress')} />
+            <input className="form-input" autoCapitalize="words"
+              value={occ.employerAddress} onChange={f('employerAddress')} />
           </FormField>
         </div>
         <div className="sm:col-span-2">
           <FormField label={t.step2.addressLine2}>
-            <input className="form-input" value={occ.employerAddressLine2} onChange={f('employerAddressLine2')} placeholder={t.step4.employerSuiteHint} />
+            <input className="form-input" autoCapitalize="words"
+              value={occ.employerAddressLine2} onChange={f('employerAddressLine2')} placeholder={t.step4.employerSuiteHint} />
           </FormField>
         </div>
         <FormField label={t.common.city}>
-          <input className="form-input" value={occ.employerCity} onChange={f('employerCity')} />
+          <input className="form-input" autoCapitalize="words"
+            value={occ.employerCity} onChange={f('employerCity')} />
         </FormField>
         <FormField label={t.common.province}>
           <select className="form-input" value={occ.employerProvince} onChange={f('employerProvince')}>
@@ -111,13 +125,14 @@ function OccupantForm({
           </select>
         </FormField>
         <FormField label={t.common.postal}>
-          <input className="form-input" value={occ.employerPostal} onChange={f('employerPostal')} />
+          <input className="form-input" autoCapitalize="characters"
+            value={occ.employerPostal} onChange={f('employerPostal')} />
         </FormField>
         <FormField label={t.step4.employmentStart}>
-          <input type="date" className="form-input" value={occ.employmentFrom} onChange={f('employmentFrom')} />
+          <DateInput value={occ.employmentFrom} onChange={(v) => onUpdate({ employmentFrom: v })} />
         </FormField>
         <FormField label={t.step4.employmentEnd} hint={t.step4.employmentEndHint}>
-          <input type="date" className="form-input" value={occ.employmentTo} onChange={f('employmentTo')} />
+          <DateInput value={occ.employmentTo} onChange={(v) => onUpdate({ employmentTo: v })} />
         </FormField>
       </div>
 
@@ -153,16 +168,19 @@ function OccupantForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div className="sm:col-span-2">
                 <FormField label={t.step4.streetAddress}>
-                  <input className="form-input" value={occ.currentAddress || ''} onChange={f('currentAddress')} />
+                  <input className="form-input" autoCapitalize="words"
+                    value={occ.currentAddress || ''} onChange={f('currentAddress')} />
                 </FormField>
               </div>
               <div className="sm:col-span-2">
                 <FormField label={t.step4.aptUnit}>
-                  <input className="form-input" value={occ.currentAddressLine2 || ''} onChange={f('currentAddressLine2')} />
+                  <input className="form-input" autoCapitalize="words"
+                    value={occ.currentAddressLine2 || ''} onChange={f('currentAddressLine2')} />
                 </FormField>
               </div>
               <FormField label={t.common.city}>
-                <input className="form-input" value={occ.currentCity || ''} onChange={f('currentCity')} />
+                <input className="form-input" autoCapitalize="words"
+                  value={occ.currentCity || ''} onChange={f('currentCity')} />
               </FormField>
               <FormField label={t.common.province}>
                 <select className="form-input" value={occ.currentProvince || ''} onChange={f('currentProvince')}>
@@ -171,7 +189,8 @@ function OccupantForm({
                 </select>
               </FormField>
               <FormField label={t.common.postal}>
-                <input className="form-input" value={occ.currentPostal || ''} onChange={f('currentPostal')} />
+                <input className="form-input" autoCapitalize="characters"
+                  value={occ.currentPostal || ''} onChange={f('currentPostal')} />
               </FormField>
             </div>
 
@@ -180,16 +199,20 @@ function OccupantForm({
             </h5>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label={t.step4.landlordFirstName}>
-                <input className="form-input" value={occ.prevLandlordFirstName || ''} onChange={f('prevLandlordFirstName')} />
+                <input className="form-input" autoCapitalize="words"
+                  value={occ.prevLandlordFirstName || ''} onChange={f('prevLandlordFirstName')} />
               </FormField>
               <FormField label={t.step4.landlordLastName}>
-                <input className="form-input" value={occ.prevLandlordLastName || ''} onChange={f('prevLandlordLastName')} />
+                <input className="form-input" autoCapitalize="words"
+                  value={occ.prevLandlordLastName || ''} onChange={f('prevLandlordLastName')} />
               </FormField>
               <FormField label={t.step4.landlordPhone}>
-                <input type="tel" className="form-input" value={occ.prevLandlordPhone || ''} onChange={handlePrevLandlordPhone} />
+                <input type="tel" inputMode="tel"
+                  className="form-input" value={occ.prevLandlordPhone || ''} onChange={handlePrevLandlordPhone} />
               </FormField>
               <FormField label={t.step4.landlordEmail}>
-                <input type="email" className="form-input" value={occ.prevLandlordEmail || ''} onChange={f('prevLandlordEmail')} />
+                <input type="email" inputMode="email" autoCapitalize="off" spellCheck={false}
+                  className="form-input" value={occ.prevLandlordEmail || ''} onChange={f('prevLandlordEmail')} />
               </FormField>
               <div className="sm:col-span-2">
                 <FormField label={t.step4.reasonForLeaving}>

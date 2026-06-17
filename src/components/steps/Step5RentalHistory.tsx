@@ -53,20 +53,24 @@ export default function Step5RentalHistory({ data, onChange, errors, onFieldBlur
         <h3 className="section-title">{t.step5.prevLandlord}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label={t.step5.landlordFirstName} required error={err('prevLandlordFirstName')}>
-            <input className="form-input" value={data.prevLandlordFirstName}
+            <input className="form-input" autoCapitalize="words"
+              value={data.prevLandlordFirstName}
               onChange={f('prevLandlordFirstName')} onBlur={blur('prevLandlordFirstName')} />
           </FormField>
           <FormField label={t.step5.landlordLastName} required error={err('prevLandlordLastName')}>
-            <input className="form-input" value={data.prevLandlordLastName}
+            <input className="form-input" autoCapitalize="words"
+              value={data.prevLandlordLastName}
               onChange={f('prevLandlordLastName')} onBlur={blur('prevLandlordLastName')} />
           </FormField>
           <FormField label={t.step5.landlordPhone} required error={err('prevLandlordPhone')}>
-            <input type="tel" className="form-input" value={data.prevLandlordPhone}
+            <input type="tel" inputMode="tel"
+              className="form-input" value={data.prevLandlordPhone}
               onChange={(e) => onChange({ prevLandlordPhone: formatPhone(e.target.value) })}
               onBlur={blur('prevLandlordPhone')} />
           </FormField>
           <FormField label={t.step5.landlordEmail} required error={err('prevLandlordEmail')}>
-            <input type="email" className="form-input" value={data.prevLandlordEmail}
+            <input type="email" inputMode="email" autoCapitalize="off" spellCheck={false}
+              className="form-input" value={data.prevLandlordEmail}
               onChange={f('prevLandlordEmail')} onBlur={blur('prevLandlordEmail')} />
           </FormField>
         </div>
@@ -76,7 +80,9 @@ export default function Step5RentalHistory({ data, onChange, errors, onFieldBlur
         <h3 className="section-title">{t.step5.tenancyDetails}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label={t.step5.prevMonthlyRent}>
-            <input type="number" className="form-input" value={data.prevMonthlyRent} onChange={f('prevMonthlyRent')} onWheel={(e) => (e.target as HTMLInputElement).blur()} placeholder="1200" />
+            <input type="text" inputMode="decimal" autoComplete="off"
+              className="form-input" value={data.prevMonthlyRent}
+              onChange={f('prevMonthlyRent')} placeholder="1200" />
           </FormField>
           <div /> {/* spacer */}
           <FormField label={t.step5.rentedFrom} hint={t.step5.rentedFromHint}>

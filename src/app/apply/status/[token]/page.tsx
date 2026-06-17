@@ -1,5 +1,5 @@
 import { getConfig } from '@/lib/config'
-import { getApplicationByToken, getApplicantConversation } from '@/lib/monday'
+import { getApplicationByToken } from '@/lib/monday'
 import { getDictionary, Locale } from '@/lib/i18n'
 import StatusContent from '@/components/StatusContent'
 import Link from 'next/link'
@@ -22,10 +22,6 @@ export default async function StatusPage({
     getConfig(),
     getApplicationByToken(token).catch(() => null),
   ])
-
-  const initialConversation = app
-    ? await getApplicantConversation(app.id).catch(() => [])
-    : []
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col">
@@ -56,7 +52,6 @@ export default async function StatusPage({
             locale={locale}
             token={token}
             initialApp={app}
-            initialConversation={initialConversation}
           />
         )}
       </main>

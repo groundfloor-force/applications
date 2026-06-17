@@ -11,6 +11,7 @@ interface Props {
   max?: string                   // ISO max date (e.g. today's date)
   min?: string
   placeholder?: string
+  autoComplete?: string
 }
 
 // A typeable date field. Users can punch in 8 digits (YYYYMMDD) and the
@@ -26,6 +27,7 @@ export default function DateInput({
   max,
   min,
   placeholder = 'YYYY-MM-DD',
+  autoComplete = 'off',
 }: Props) {
   const [local, setLocal] = useState(value || '')
 
@@ -57,7 +59,7 @@ export default function DateInput({
     <input
       type="text"
       inputMode="numeric"
-      autoComplete="off"
+      autoComplete={autoComplete}
       value={local}
       onChange={handleChange}
       onBlur={onBlur}

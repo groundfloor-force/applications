@@ -59,6 +59,7 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
               hint={t.step6.employerHint}>
               <input
                 className="form-input"
+                autoCapitalize="words"
                 value={data.employerName}
                 onChange={(e) => onChange({ employerName: e.target.value })}
               />
