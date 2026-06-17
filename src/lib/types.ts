@@ -107,6 +107,7 @@ export interface FormData {
 
   // Step 6 – Employment
   employerName: string
+  monthlyGrossSalary: string
   documents: File[]
   occupantDocs: File[][]
 
@@ -209,6 +210,7 @@ export const initialFormData: FormData = {
   prevLandlordPhone: '',
   prevLandlordEmail: '',
   employerName: '',
+  monthlyGrossSalary: '',
   documents: [],
   occupantDocs: [],
   ref1FirstName: '',

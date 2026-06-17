@@ -65,6 +65,17 @@ export default function Step6Employment({ data, onChange, errors }: Props) {
               />
             </FormField>
           </div>
+          <FormField label={t.step6.monthlyGross} hint={t.step6.monthlyGrossHint}>
+            <input
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              className="form-input"
+              value={data.monthlyGrossSalary}
+              onChange={(e) => onChange({ monthlyGrossSalary: e.target.value })}
+              placeholder="4500"
+            />
+          </FormField>
         </div>
       </div>
 

@@ -239,6 +239,7 @@ const TEST_DATA: Omit<FormData, 'documents' | 'occupantDocs'> = {
   prevLandlordPhone: '506-555-4000',
   prevLandlordEmail: 'robert.landlord@example.com',
   employerName: 'Atlantic Health Sciences',
+  monthlyGrossSalary: '4800',
   ref1FirstName: 'Patricia',
   ref1LastName: 'Friend',
   ref1Phone: '506-555-5000',

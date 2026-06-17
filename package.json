@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
     "@fontsource-variable/mona-sans": "^5.2.8",
     "jspdf": "^4.2.1",
     "next": "^15.3.1",
