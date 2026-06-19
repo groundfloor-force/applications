@@ -67,7 +67,11 @@ function UnitRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-brand-dark text-sm" style={{ fontWeight: 600 }}>
-            {property.unit ? `Unit ${property.unit}` : property.name}
+            {property.address
+              ? `${property.address}${property.unit ? `, Unit ${property.unit}` : ''}`
+              : property.unit
+                ? `Unit ${property.unit}`
+                : property.name}
           </span>
           {property.rent > 0 && (
             <span className="text-primary-500 text-sm" style={{ fontWeight: 600 }}>
@@ -259,8 +263,8 @@ export default function Step1Property({ data, onChange, onNext }: Props) {
         <div className="space-y-4 mb-5">
           {results.map(([address, units]) => (
             <div key={address} className="bg-white border border-brand-border overflow-hidden">
-              <div className="px-4 py-2 bg-brand-bg border-b border-brand-border">
-                <p className="text-xs text-brand-gray uppercase tracking-wide" style={{ fontWeight: 600 }}>
+              <div className="px-4 py-3 bg-brand-bg border-b border-brand-border">
+                <p className="text-base text-brand-dark" style={{ fontWeight: 700 }}>
                   {address}
                 </p>
               </div>

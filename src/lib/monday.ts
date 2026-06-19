@@ -37,40 +37,62 @@ async function mondayQuery<T = Record<string, unknown>>(
 
 const AVAILABLE_STATUSES = ['VACANT', 'COMING UP']
 
+const VACANCY_COLUMN_IDS = `[
+  "status",
+  "text_mkrckabm", "text_mkrcc6j0", "text_mkrcjxvm",
+  "text_mkrcw3g6", "numeric_mm2z81x6", "dropdown_mm2znqk1",
+  "dropdown_mm2zwhb", "link", "dropdown_mm2zjvrj",
+  "dropdown_mm2mdv93", "dropdown_mm2zseg3", "dropdown_mm2zccv7",
+  "dropdown_mm2zzz10", "dropdown_mm2z2jvk"
+]`
+
+type RawVacancyItem = {
+  id: string
+  name: string
+  column_values: { id: string; text: string; value: string }[]
+}
+
+type VacancyPage = { cursor: string | null; items: RawVacancyItem[] }
+
+// The vacancy board has more than 500 items, so a single items_page call
+// silently drops newer listings (e.g. 250 Mill Road). Walk the cursor.
 export async function getVacancies(): Promise<Property[]> {
-  const query = `
+  const firstQuery = `
     query {
       boards(ids: [${VACANCY_BOARD_ID}]) {
         items_page(limit: 500) {
+          cursor
           items {
             id
             name
-            column_values(ids: [
-              "status",
-              "text_mkrckabm", "text_mkrcc6j0", "text_mkrcjxvm",
-              "text_mkrcw3g6", "numeric_mm2z81x6", "dropdown_mm2znqk1",
-              "dropdown_mm2zwhb", "link", "dropdown_mm2zjvrj",
-              "dropdown_mm2mdv93", "dropdown_mm2zseg3", "dropdown_mm2zccv7",
-              "dropdown_mm2zzz10", "dropdown_mm2z2jvk"
-            ]) {
-              id
-              text
-              value
-            }
+            column_values(ids: ${VACANCY_COLUMN_IDS}) { id text value }
           }
         }
       }
     }
   `
 
-  type RawItem = {
-    id: string
-    name: string
-    column_values: { id: string; text: string; value: string }[]
-  }
+  const first = await mondayQuery<{ boards: { items_page: VacancyPage }[] }>(firstQuery)
+  const items: RawVacancyItem[] = [...(first.boards[0]?.items_page?.items ?? [])]
+  let cursor = first.boards[0]?.items_page?.cursor ?? null
 
-  const data = await mondayQuery<{ boards: { items_page: { items: RawItem[] } }[] }>(query)
-  const items = data.boards[0]?.items_page?.items ?? []
+  while (cursor) {
+    const next = await mondayQuery<{ next_items_page: VacancyPage }>(
+      `query($cursor: String!) {
+        next_items_page(cursor: $cursor, limit: 500) {
+          cursor
+          items {
+            id
+            name
+            column_values(ids: ${VACANCY_COLUMN_IDS}) { id text value }
+          }
+        }
+      }`,
+      { cursor }
+    )
+    items.push(...(next.next_items_page?.items ?? []))
+    cursor = next.next_items_page?.cursor ?? null
+  }
 
   return items
     .map((item) => {
@@ -78,12 +100,13 @@ export async function getVacancies(): Promise<Property[]> {
       const t = (id: string) => col(id)?.text ?? ''
       const pictureUrl = t('link')
       const status = t('status')
+      const unit = t('text_mkrcc6j0')
 
       return {
         id: item.id,
         name: item.name,
-        address: t('text_mkrckabm'),
-        unit: t('text_mkrcc6j0'),
+        address: t('text_mkrckabm') || deriveAddressFromName(item.name, unit),
+        unit,
         city: t('text_mkrcjxvm'),
         postal: t('text_mkrcw3g6'),
         rent: parseFloat(t('numeric_mm2z81x6')) || 0,
@@ -100,6 +123,21 @@ export async function getVacancies(): Promise<Property[]> {
       }
     })
     .filter((p) => AVAILABLE_STATUSES.includes(p.status))
+}
+
+// Item names look like "250 Mill Road - 1", "93 Thibodeau #6", or "116 Mill".
+// When the Address column is blank, recover the street by stripping a trailing
+// unit suffix.
+function deriveAddressFromName(name: string, unit: string): string {
+  if (!name) return ''
+  const trimmed = name.trim()
+  if (unit) {
+    const escaped = unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`\\s*[-#]\\s*${escaped}\\s*$`, 'i')
+    const stripped = trimmed.replace(re, '').trim()
+    if (stripped) return stripped
+  }
+  return trimmed.replace(/\s*[-#]\s*\S+\s*$/, '').trim() || trimmed
 }
 
 // ── Applications Board ────────────────────────────────────────────────────────
