@@ -7,7 +7,7 @@ import { generateApplicationPdf } from '@/lib/pdf'
 import { runIncomeVerification, formatVerificationUpdate, type VerificationInput } from '@/lib/income-verification'
 import type { FormData } from '@/lib/types'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // Parse a money-like string ("$1,500" or "1500") to a number, returning
 // null if blank or unparseable.
@@ -116,10 +116,23 @@ export async function POST(req: NextRequest) {
     const pdfName = `Application_${data.firstName}_${data.lastName}_${dateStr}.pdf`
     await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
 
-    for (const { buffer, name, type, label } of fileBuffers) {
-      const safeName = `${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_')
-      await uploadFileToMonday(itemId, buffer, safeName, type)
+    // Fan out Monday uploads with bounded concurrency so we don't blow the
+    // function budget on serial network round-trips. Monday's rate limits
+    // are generous per-mutation, but keep parallelism modest to be safe.
+    const CONCURRENCY = 4
+    const queue = fileBuffers.map(({ buffer, name, type, label }) => ({
+      buffer,
+      type,
+      safeName: `${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_'),
+    }))
+    async function worker() {
+      while (queue.length > 0) {
+        const item = queue.shift()
+        if (!item) return
+        await uploadFileToMonday(itemId, item.buffer, item.safeName, item.type)
+      }
     }
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker))
 
     const mondayItemUrl = `https://groundfloor-force.monday.com/boards/${640654033}/pulses/${itemId}`
     const config = await getConfig().catch(() => null)

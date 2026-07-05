@@ -1,6 +1,7 @@
 'use client'
 
 import { useT } from '@/lib/locale-context'
+import { compressImage } from '@/lib/compress-image'
 
 const MAX_MB = 50
 const DEFAULT_ACCEPT = '.pdf,.jpg,.jpeg,.png,.docx'
@@ -30,18 +31,18 @@ export default function MultiFileUploader({
 }: Props) {
   const t = useT()
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const incoming = Array.from(e.target.files ?? [])
+    e.target.value = ''
     const valid: File[] = []
     for (const f of incoming) {
       if (f.size > MAX_MB * 1024 * 1024) {
         alert(`"${f.name}" is too large (max ${MAX_MB} MB). Skipped.`)
         continue
       }
-      valid.push(f)
+      valid.push(await compressImage(f))
     }
     if (valid.length > 0) onChange([...files, ...valid])
-    e.target.value = ''
   }
 
   const remove = (i: number) => onChange(files.filter((_, j) => j !== i))

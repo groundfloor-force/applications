@@ -3,6 +3,7 @@
 import { FormData } from '@/lib/types'
 import FormField from '@/components/FormField'
 import { useT } from '@/lib/locale-context'
+import { compressImage } from '@/lib/compress-image'
 
 interface Props {
   data: FormData
@@ -15,20 +16,20 @@ const ACCEPT = '.pdf,.jpg,.jpeg,.png,.docx'
 
 export default function Step6Employment({ data, onChange, errors }: Props) {
   const t = useT()
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
     const valid: File[] = []
     for (const f of files) {
       if (f.size > MAX_MB * 1024 * 1024) {
         alert(`"${f.name}" is too large (max ${MAX_MB} MB). Skipped.`)
         continue
       }
-      valid.push(f)
+      valid.push(await compressImage(f))
     }
     if (valid.length > 0) {
       onChange({ documents: [...data.documents, ...valid] })
     }
-    e.target.value = ''
   }
 
   const removeFile = (index: number) => {
