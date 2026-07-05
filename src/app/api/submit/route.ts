@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { after } from 'next/server'
 import { createApplication, createApplicationUpdate, uploadFileToMonday, postPlainUpdate } from '@/lib/monday'
-import { sendConfirmationEmail, sendNotificationEmail } from '@/lib/email'
+import { sendConfirmationEmail, sendNotificationEmail, sendFailureNotificationEmail } from '@/lib/email'
 import { getConfig } from '@/lib/config'
 import { generateApplicationPdf } from '@/lib/pdf'
 import { runIncomeVerification, formatVerificationUpdate, type VerificationInput } from '@/lib/income-verification'
@@ -9,8 +9,6 @@ import type { FormData } from '@/lib/types'
 
 export const maxDuration = 300
 
-// Parse a money-like string ("$1,500" or "1500") to a number, returning
-// null if blank or unparseable.
 function parseMoney(s: string | undefined | null): number | null {
   if (!s) return null
   const cleaned = String(s).replace(/[^\d.]/g, '')
@@ -20,26 +18,58 @@ function parseMoney(s: string | undefined | null): number | null {
 }
 
 export async function POST(req: NextRequest) {
+  // Short 8-char id for grep-ability in Vercel logs and cross-reference in
+  // the failure notification email + client error banner.
+  const requestId = crypto.randomUUID().slice(0, 8)
+  const startedAt = Date.now()
+  let stage = 'init'
+
+  // Captured for the failure email if we crash before parsing.
+  let applicantName = ''
+  let applicantEmail = ''
+  let applicantPhone = ''
+  let propertyAddress = ''
+  let fileCount = 0
+  let payloadBytes = 0
+
+  const log = (event: string, extra: Record<string, unknown> = {}) => {
+    console.log(
+      `[submit ${requestId}] stage=${stage} event=${event} elapsedMs=${Date.now() - startedAt}` +
+        (Object.keys(extra).length ? ' ' + JSON.stringify(extra) : ''),
+    )
+  }
+
   try {
+    stage = 'parse_multipart'
+    log('start')
     const multipart = await req.formData()
 
+    stage = 'parse_json'
     const raw = multipart.get('data')
     if (!raw || typeof raw !== 'string') {
-      return NextResponse.json({ error: 'Missing form data' }, { status: 400 })
+      log('missing_data')
+      return NextResponse.json({ error: 'Missing form data', requestId }, { status: 400 })
     }
 
     const data: Omit<FormData, 'documents' | 'occupantDocs'> = JSON.parse(raw)
     const rawLocale = multipart.get('locale')
     const locale: 'en' | 'fr' = rawLocale === 'fr' ? 'fr' : 'en'
 
-    // Collect uploaded file buffers with descriptive name prefixes so PMs
-    // can tell apart pay stubs, pet photos, co-signer docs, and supporting
-    // docs in the Monday files column.
+    applicantName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim()
+    applicantEmail = data.email ?? ''
+    applicantPhone = data.phone ?? ''
+    propertyAddress =
+      data.properties && data.properties.length > 1
+        ? `${data.properties.length} properties (${data.properties.map((p) => `${p.address}${p.unit ? ` Unit ${p.unit}` : ''}`).join('; ')})`
+        : data.property
+          ? `${data.property.address}${data.property.unit ? ` Unit ${data.property.unit}` : ''}`
+          : ''
+
+    log('parsed', { applicant: applicantName, email: applicantEmail, locale })
+
+    stage = 'extract_files'
     const fileBuffers: { buffer: Buffer; name: string; type: string; label: string }[] = []
     const baseName = `${data.firstName}_${data.lastName}`
-
-    // Income verification staging — collected here so we can keep buffers
-    // in memory once for both Monday upload and Claude extraction.
     const verifyPrimary: { fileName: string; buffer: Buffer; mimeType: string }[] = []
     const verifyOccupants: { fileName: string; buffer: Buffer; mimeType: string }[][] =
       (data.occupants ?? []).map(() => [])
@@ -49,6 +79,7 @@ export async function POST(req: NextRequest) {
       if (!(value instanceof File) || value.size === 0) continue
       const buf = Buffer.from(await value.arrayBuffer())
       const type = value.type || 'application/octet-stream'
+      payloadBytes += buf.length
 
       if (key.startsWith('doc_')) {
         fileBuffers.push({ buffer: buf, name: value.name, type, label: baseName })
@@ -77,8 +108,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Signature is sent as a base64 data URL in the JSON payload; convert to
-    // a PNG attachment so PMs see it in the Monday files column.
     if (data.signatureData && data.signatureData.startsWith('data:image/')) {
       const match = data.signatureData.match(/^data:(image\/\w+);base64,(.+)$/)
       if (match) {
@@ -91,57 +120,69 @@ export async function POST(req: NextRequest) {
           type: sigType,
           label: `${baseName}_Signature`,
         })
+        payloadBytes += sigBuf.length
       }
     }
 
+    fileCount = fileBuffers.length
+    log('files_extracted', {
+      fileCount,
+      payloadMB: (payloadBytes / 1024 / 1024).toFixed(2),
+      files: fileBuffers.map((f) => ({ name: f.name, mb: (f.buffer.length / 1024 / 1024).toFixed(2), type: f.type })),
+    })
+
     const token = crypto.randomUUID()
 
-    // Single Monday item per submission, even when multiple properties were
-    // selected. The full preference list is surfaced in the update note.
+    stage = 'monday_create_item'
     const itemId = await createApplication(data, token, locale)
+    log('item_created', { itemId })
 
-    // Surface the applicant's preferred language as a short note before the
-    // main details update — Monday lists updates newest-first, so PMs see
-    // this near the top when they open the item.
+    stage = 'monday_language_update'
     const langLabel = locale === 'fr' ? 'Français (FR)' : 'English (EN)'
-    await postPlainUpdate(
-      itemId,
-      `<p><b>Preferred language:</b> ${langLabel}</p>`
-    ).catch(() => null)
+    await postPlainUpdate(itemId, `<p><b>Preferred language:</b> ${langLabel}</p>`).catch(() => null)
 
+    stage = 'monday_details_update'
     await createApplicationUpdate(itemId, data)
+    log('updates_posted')
 
+    stage = 'pdf_generate'
     const pdfBuffer = generateApplicationPdf(data)
+    log('pdf_generated', { pdfKB: Math.round(pdfBuffer.length / 1024) })
+
+    stage = 'monday_upload_pdf'
     const dateStr = new Date().toISOString().split('T')[0]
     const pdfName = `Application_${data.firstName}_${data.lastName}_${dateStr}.pdf`
     await uploadFileToMonday(itemId, pdfBuffer, pdfName, 'application/pdf')
+    log('pdf_uploaded')
 
-    // Fan out Monday uploads with bounded concurrency so we don't blow the
-    // function budget on serial network round-trips. Monday's rate limits
-    // are generous per-mutation, but keep parallelism modest to be safe.
+    stage = 'monday_upload_files'
     const CONCURRENCY = 4
     const queue = fileBuffers.map(({ buffer, name, type, label }) => ({
       buffer,
       type,
       safeName: `${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_'),
     }))
+    let uploaded = 0
     async function worker() {
       while (queue.length > 0) {
         const item = queue.shift()
         if (!item) return
-        await uploadFileToMonday(itemId, item.buffer, item.safeName, item.type)
+        try {
+          await uploadFileToMonday(itemId, item.buffer, item.safeName, item.type)
+          uploaded++
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error(`[submit ${requestId}] file_upload_failed name=${item.safeName} error="${msg}"`)
+          throw err
+        }
       }
     }
     await Promise.all(Array.from({ length: CONCURRENCY }, worker))
+    log('files_uploaded', { uploaded })
 
+    stage = 'notify_emails'
     const mondayItemUrl = `https://groundfloor-force.monday.com/boards/${640654033}/pulses/${itemId}`
     const config = await getConfig().catch(() => null)
-
-    const propertySummary = data.properties && data.properties.length > 1
-      ? `${data.properties.length} properties (${data.properties.map((p) => `${p.address}${p.unit ? ` Unit ${p.unit}` : ''}`).join('; ')})`
-      : data.property
-        ? `${data.property.address}${data.property.unit ? ` Unit ${data.property.unit}` : ''}`
-        : ''
 
     await Promise.allSettled([
       data.email
@@ -151,17 +192,14 @@ export async function POST(req: NextRequest) {
         ? sendNotificationEmail(
             config.notificationEmail,
             `${data.firstName} ${data.lastName}`,
-            propertySummary,
-            mondayItemUrl
+            propertyAddress,
+            mondayItemUrl,
           )
         : Promise.resolve(),
     ])
+    log('emails_sent')
 
-    // Income verification runs after the response is sent. The applicant
-    // sees the success page immediately; the verification update lands on
-    // the Monday item ~30-60s later. We keep buffers in the closure rather
-    // than re-reading them from request, which is no longer available
-    // after the response.
+    stage = 'schedule_income_verification'
     const monthlyRent = parseMoney(data.monthlyRent) ?? 0
     const verificationInput: VerificationInput = {
       monthlyRent,
@@ -188,20 +226,60 @@ export async function POST(req: NextRequest) {
         const result = await runIncomeVerification(verificationInput)
         const html = formatVerificationUpdate(result)
         await postPlainUpdate(itemId, html)
+        console.log(`[submit ${requestId}] income_verification_ok`)
       } catch (err) {
-        console.error('Income verification failed:', err)
-        // Best-effort error note so PMs see something happened.
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        console.error(`[submit ${requestId}] income_verification_failed error="${msg}"`)
         await postPlainUpdate(
           itemId,
-          `<p><b>📋 Income verification failed</b></p><p><i>${err instanceof Error ? err.message : 'Unknown error'}</i></p>`,
+          `<p><b>📋 Income verification failed</b></p><p><i>${msg}</i></p>`,
         ).catch(() => null)
       }
     })
 
-    return NextResponse.json({ success: true, itemId, token })
+    stage = 'done'
+    log('success', { itemId, totalMs: Date.now() - startedAt })
+    return NextResponse.json({ success: true, itemId, token, requestId })
   } catch (error) {
-    console.error('Submission error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json({ error: `Submission failed: ${message}` }, { status: 500 })
+    const stack = error instanceof Error ? error.stack : undefined
+    const elapsedMs = Date.now() - startedAt
+    const payloadMB = (payloadBytes / 1024 / 1024).toFixed(2)
+
+    console.error(
+      `[submit ${requestId}] FAILED stage=${stage} elapsedMs=${elapsedMs} applicant="${applicantName}" ` +
+        `email=${applicantEmail} files=${fileCount} payloadMB=${payloadMB} error="${message}"`,
+    )
+    if (stack) console.error(`[submit ${requestId}] stack:\n${stack}`)
+
+    // Best-effort staff notification so failures don't stay silent.
+    try {
+      const config = await getConfig().catch(() => null)
+      if (config?.notificationEmail) {
+        await sendFailureNotificationEmail(config.notificationEmail, {
+          requestId,
+          stage,
+          errorMessage: message,
+          applicantName,
+          applicantEmail,
+          applicantPhone,
+          propertyAddress,
+          fileCount,
+          payloadMB,
+          elapsedMs,
+        })
+      }
+    } catch (notifyErr) {
+      console.error(`[submit ${requestId}] failure_notification_failed:`, notifyErr)
+    }
+
+    return NextResponse.json(
+      {
+        error: `Submission failed at ${stage}: ${message}`,
+        requestId,
+        stage,
+      },
+      { status: 500 },
+    )
   }
 }

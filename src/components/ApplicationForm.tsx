@@ -415,9 +415,18 @@ export default function ApplicationForm({ config, autofill }: Props) {
       })
 
       const res = await fetch('/api/submit', { method: 'POST', body: formPayload })
-      const result = await res.json()
+      let result: { error?: string; token?: string; requestId?: string; stage?: string } = {}
+      try {
+        result = await res.json()
+      } catch {
+        // Non-JSON response (e.g. Vercel 413/504 HTML page) — fall through with empty result.
+      }
 
-      if (!res.ok) throw new Error(result.error || 'Submission failed')
+      if (!res.ok) {
+        const base = result.error || `Submission failed (HTTP ${res.status})`
+        const ref = result.requestId ? ` [ref: ${result.requestId}]` : ''
+        throw new Error(`${base}${ref}`)
+      }
 
       clearFormFromStorage()
       router.push(`/apply/success?token=${result.token ?? ''}&lang=${locale}`)

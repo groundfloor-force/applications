@@ -72,6 +72,79 @@ export async function sendConfirmationEmail(
   })
 }
 
+// ── Staff failure notification ────────────────────────────────────────────────
+
+export async function sendFailureNotificationEmail(
+  notificationEmail: string,
+  params: {
+    requestId: string
+    stage: string
+    errorMessage: string
+    applicantName: string
+    applicantEmail: string
+    applicantPhone: string
+    propertyAddress: string
+    fileCount: number
+    payloadMB: string
+    elapsedMs: number
+  },
+): Promise<void> {
+  if (!notificationEmail) return
+
+  const {
+    requestId,
+    stage,
+    errorMessage,
+    applicantName,
+    applicantEmail,
+    applicantPhone,
+    propertyAddress,
+    fileCount,
+    payloadMB,
+    elapsedMs,
+  } = params
+
+  await send({
+    to: [notificationEmail],
+    subject: `⚠️ Application FAILED: ${applicantName || 'Unknown'} — stage: ${stage}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 640px; margin: 0 auto; color: #333;">
+        <div style="background: #DC3545; padding: 20px 32px;">
+          <h1 style="color: white; margin: 0; font-size: 18px;">Application Submission Failed</h1>
+        </div>
+        <div style="padding: 24px 32px;">
+          <p>An applicant tried to submit but the server threw an error. Details below.</p>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 6px 0; color: #555; width: 160px;">Reference ID</td><td style="padding: 6px 0; font-family: monospace; font-weight: 600;">${requestId}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Failed at stage</td><td style="padding: 6px 0; font-weight: 600;">${stage}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Error message</td><td style="padding: 6px 0; font-family: monospace; color: #DC3545;">${errorMessage}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Elapsed</td><td style="padding: 6px 0;">${(elapsedMs / 1000).toFixed(1)}s</td></tr>
+          </table>
+
+          <h3 style="margin: 20px 0 8px; font-size: 14px;">Applicant</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #555; width: 160px;">Name</td><td style="padding: 6px 0;">${applicantName || '—'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Email</td><td style="padding: 6px 0;">${applicantEmail || '—'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Phone</td><td style="padding: 6px 0;">${applicantPhone || '—'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Property</td><td style="padding: 6px 0;">${propertyAddress || '—'}</td></tr>
+          </table>
+
+          <h3 style="margin: 20px 0 8px; font-size: 14px;">Payload</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #555; width: 160px;">File count</td><td style="padding: 6px 0;">${fileCount}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Total size</td><td style="padding: 6px 0;">${payloadMB} MB</td></tr>
+          </table>
+
+          <p style="margin-top: 20px; font-size: 12px; color: #999;">
+            Grep Vercel logs for <code>${requestId}</code> to see the full stage trace.
+          </p>
+        </div>
+      </div>
+    `,
+  })
+}
+
 // ── Staff notification ────────────────────────────────────────────────────────
 
 export async function sendNotificationEmail(
