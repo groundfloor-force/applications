@@ -532,10 +532,11 @@ export async function uploadFileToMonday(
   itemId: string,
   fileBuffer: Buffer,
   fileName: string,
-  mimeType: string
+  mimeType: string,
+  columnId: string = 'files',
 ): Promise<void> {
   const query = `mutation ($file: File!) {
-    add_file_to_column(item_id: ${itemId}, column_id: "files", file: $file) { id }
+    add_file_to_column(item_id: ${itemId}, column_id: "${columnId}", file: $file) { id }
   }`
 
   const form = new FormData()
@@ -553,3 +554,168 @@ export async function uploadFileToMonday(
     throw new Error(`Monday file upload failed (${res.status}): ${text}`)
   }
 }
+
+// ── Support Board ─────────────────────────────────────────────────────────────
+
+const SUPPORT_BOARD_ID = 675837564
+const SUPPORT_GROUP_NEW_EMAILED = 'emailed_items10521'
+
+export interface SupportFormData {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  address: string
+  subject: string
+  comment: string
+}
+
+export interface VacancyMatch {
+  itemId: string
+  pod: string | null // Alpha POD | Bravo POD | null
+  matchedName: string
+}
+
+// Normalize an address string for fuzzy matching. Strips punctuation,
+// street-type suffixes, unit prefixes, and collapses whitespace.
+function normalizeAddress(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/\bunit\s*#?\s*\w+/g, '')
+    .replace(/\bapt\.?\s*#?\s*\w+/g, '')
+    .replace(/\b(street|st|road|rd|avenue|ave|drive|dr|court|ct|lane|ln|boulevard|blvd|crescent|cres|place|pl|way|highway|hwy)\b\.?/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Match the applicant's free-text address against Vacancy List items.
+// Returns the best-scoring match and its POD, or null if nothing scores.
+export async function findVacancyForSupport(address: string): Promise<VacancyMatch | null> {
+  const needle = normalizeAddress(address)
+  if (!needle) return null
+
+  const firstQuery = `
+    query {
+      boards(ids: [${VACANCY_BOARD_ID}]) {
+        items_page(limit: 500) {
+          cursor
+          items {
+            id
+            name
+            column_values(ids: ["dropdown_mm4p9tx9", "text_mkrckabm", "text_mkrcc6j0"]) {
+              id text
+            }
+          }
+        }
+      }
+    }
+  `
+
+  type Row = {
+    id: string
+    name: string
+    column_values: { id: string; text: string }[]
+  }
+  type Page = { cursor: string | null; items: Row[] }
+
+  const first = await mondayQuery<{ boards: { items_page: Page }[] }>(firstQuery)
+  const items: Row[] = [...(first.boards[0]?.items_page?.items ?? [])]
+  let cursor = first.boards[0]?.items_page?.cursor ?? null
+
+  while (cursor) {
+    const next = await mondayQuery<{ next_items_page: Page }>(`
+      query {
+        next_items_page(cursor: "${cursor}", limit: 500) {
+          cursor
+          items {
+            id
+            name
+            column_values(ids: ["dropdown_mm4p9tx9", "text_mkrckabm", "text_mkrcc6j0"]) {
+              id text
+            }
+          }
+        }
+      }
+    `)
+    items.push(...(next.next_items_page?.items ?? []))
+    cursor = next.next_items_page?.cursor ?? null
+  }
+
+  // Score = number of needle tokens that appear in the candidate's normalized
+  // combined name + mailing address. Requires at least the majority of tokens
+  // (and 2+ if the address is more than one token) to avoid spurious matches.
+  const needleTokens = needle.split(' ').filter(Boolean)
+  let best: { row: Row; score: number } | null = null
+
+  for (const row of items) {
+    const mailing = row.column_values.find((c) => c.id === 'text_mkrckabm')?.text ?? ''
+    const unit = row.column_values.find((c) => c.id === 'text_mkrcc6j0')?.text ?? ''
+    const combined = normalizeAddress(`${row.name} ${mailing} ${unit}`)
+    const combinedTokens = new Set(combined.split(' ').filter(Boolean))
+    let score = 0
+    for (const tok of needleTokens) if (combinedTokens.has(tok)) score++
+    if (!best || score > best.score) best = { row, score }
+  }
+
+  if (!best) return null
+  const required = Math.max(2, Math.ceil(needleTokens.length * 0.6))
+  if (best.score < required) return null
+
+  const podRaw = best.row.column_values.find((c) => c.id === 'dropdown_mm4p9tx9')?.text ?? ''
+  // Vacancy uses "A" / "B" / "B (modified)"; Support uses "Alpha POD" / "Bravo POD".
+  let pod: string | null = null
+  const podUpper = podRaw.trim().toUpperCase()
+  if (podUpper === 'A') pod = 'Alpha POD'
+  else if (podUpper.startsWith('B')) pod = 'Bravo POD'
+
+  return { itemId: best.row.id, pod, matchedName: best.row.name }
+}
+
+export async function createSupportItem(
+  data: SupportFormData,
+  vacancy: VacancyMatch | null,
+): Promise<string> {
+  const itemName = `${data.subject.trim()} = ${data.address.trim()}`.slice(0, 250)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cv: Record<string, any> = {
+    text: data.firstName,
+    text_mkytg1vg: data.lastName,
+    text_mkytj9q0: data.email,
+    phone: { phone: data.phone, countryShortName: 'CA' },
+    short_texts3qc1dzd: data.address,
+    long_text5: data.comment,
+    date6: { date: new Date().toISOString().split('T')[0] },
+  }
+
+  if (vacancy?.itemId) {
+    cv.board_relation_mm33kdmz = { item_ids: [Number(vacancy.itemId)] }
+  }
+  if (vacancy?.pod) {
+    cv.dropdown_mm4z9d6z = { labels: [vacancy.pod] }
+  }
+
+  const mutation = `
+    mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
+      create_item(
+        board_id: $boardId
+        group_id: $groupId
+        item_name: $itemName
+        column_values: $columnValues
+      ) { id }
+    }
+  `
+
+  const result = await mondayQuery<{ create_item: { id: string } }>(mutation, {
+    boardId: String(SUPPORT_BOARD_ID),
+    groupId: SUPPORT_GROUP_NEW_EMAILED,
+    itemName,
+    columnValues: JSON.stringify(cv),
+  })
+
+  return result.create_item.id
+}
+
+export const SUPPORT_FILES_COLUMN_ID = 'file_mm33ek9z'
+export const SUPPORT_BOARD_URL_PREFIX = `https://groundfloor-force.monday.com/boards/${SUPPORT_BOARD_ID}/pulses/`
