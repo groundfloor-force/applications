@@ -424,6 +424,7 @@ export default function ApplicationForm({ config, autofill }: Props) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.'
       setErrors({ submit: message })
+      setTouched((prev) => new Set([...prev, 'submit']))
       setSubmitting(false)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
