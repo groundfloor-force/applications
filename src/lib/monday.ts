@@ -685,7 +685,6 @@ export async function createSupportItem(
     text_mkytj9q0: data.email,
     phone: { phone: data.phone, countryShortName: 'CA' },
     short_texts3qc1dzd: data.address,
-    long_text5: data.comment,
     date6: { date: new Date().toISOString().split('T')[0] },
   }
 

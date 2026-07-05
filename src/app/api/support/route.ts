@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   createSupportItem,
   findVacancyForSupport,
+  postPlainUpdate,
   uploadFileToMonday,
   SUPPORT_FILES_COLUMN_ID,
   SUPPORT_BOARD_URL_PREFIX,
   type SupportFormData,
 } from '@/lib/monday'
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 
 export const maxDuration = 60
 
@@ -58,6 +67,11 @@ export async function POST(req: NextRequest) {
     stage = 'create_item'
     const itemId = await createSupportItem(data, vacancy)
     log('item_created', { itemId })
+
+    stage = 'post_comment_update'
+    const commentHtml = `<p>${escapeHtml(data.comment).replace(/\n/g, '<br/>')}</p>`
+    await postPlainUpdate(itemId, commentHtml)
+    log('comment_posted')
 
     stage = 'upload_file'
     const file = multipart.get('file')
