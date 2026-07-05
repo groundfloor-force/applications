@@ -690,10 +690,7 @@ export async function findVacancyForSupport(address: string): Promise<VacancyMat
   return { itemId: best.row.id, pod, matchedName: best.row.name }
 }
 
-export async function createSupportItem(
-  data: SupportFormData,
-  vacancy: VacancyMatch | null,
-): Promise<string> {
+export async function createSupportItem(data: SupportFormData): Promise<string> {
   const itemName = `${data.subject.trim()} = ${data.address.trim()}`.slice(0, 250)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -704,13 +701,6 @@ export async function createSupportItem(
     phone: { phone: data.phone, countryShortName: 'CA' },
     short_texts3qc1dzd: data.address,
     date6: { date: new Date().toISOString().split('T')[0] },
-  }
-
-  if (vacancy?.itemId) {
-    cv.board_relation_mm33kdmz = { item_ids: [Number(vacancy.itemId)] }
-  }
-  if (vacancy?.pod) {
-    cv.dropdown_mm4z9d6z = { labels: [vacancy.pod] }
   }
 
   const mutation = `
@@ -732,6 +722,35 @@ export async function createSupportItem(
   })
 
   return result.create_item.id
+}
+
+// Patch POD + Vacancy List link onto an existing Support item. Used to
+// backfill vacancy match after the response has been returned so the
+// applicant isn't blocked by the vacancy fetch.
+export async function applyVacancyMatchToSupportItem(
+  itemId: string,
+  vacancy: VacancyMatch,
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cv: Record<string, any> = {}
+  if (vacancy.itemId) cv.board_relation_mm33kdmz = { item_ids: [Number(vacancy.itemId)] }
+  if (vacancy.pod) cv.dropdown_mm4z9d6z = { labels: [vacancy.pod] }
+  if (Object.keys(cv).length === 0) return
+
+  const mutation = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
+      change_multiple_column_values(
+        board_id: $boardId
+        item_id: $itemId
+        column_values: $columnValues
+      ) { id }
+    }
+  `
+  await mondayQuery(mutation, {
+    boardId: String(SUPPORT_BOARD_ID),
+    itemId: String(itemId),
+    columnValues: JSON.stringify(cv),
+  })
 }
 
 export const SUPPORT_FILES_COLUMN_ID = 'file_mm33ek9z'

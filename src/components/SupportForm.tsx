@@ -31,7 +31,7 @@ export default function SupportForm() {
   const [file, setFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState | 'submit', string>>>({})
   const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState<null | { itemId: string; matchedProperty?: string; pod?: string }>(null)
+  const [success, setSuccess] = useState<null | { itemId: string }>(null)
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => {
     setData((prev) => ({ ...prev, [k]: v }))
@@ -79,7 +79,7 @@ export default function SupportForm() {
       if (file) payload.append('file', file, file.name)
 
       const res = await fetch('/api/support', { method: 'POST', body: payload })
-      let result: { itemId?: string; matchedProperty?: string; pod?: string; error?: string; requestId?: string } = {}
+      let result: { itemId?: string; error?: string; requestId?: string } = {}
       try {
         result = await res.json()
       } catch {
@@ -92,11 +92,7 @@ export default function SupportForm() {
         throw new Error(`${base}${ref}`)
       }
 
-      setSuccess({
-        itemId: result.itemId ?? '',
-        matchedProperty: result.matchedProperty,
-        pod: result.pod,
-      })
+      setSuccess({ itemId: result.itemId ?? '' })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.'
@@ -120,12 +116,6 @@ export default function SupportForm() {
         <p className="text-brand-gray mb-2">
           Thanks for reaching out. A member of our team will get back to you shortly.
         </p>
-        {success.matchedProperty && (
-          <p className="text-xs text-brand-gray mt-4">
-            Matched property: <span className="text-brand-dark">{success.matchedProperty}</span>
-            {success.pod ? ` · Routed to ${success.pod}` : ''}
-          </p>
-        )}
         <button
           type="button"
           onClick={() => {

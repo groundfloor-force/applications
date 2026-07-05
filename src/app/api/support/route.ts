@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { after } from 'next/server'
 import {
+  applyVacancyMatchToSupportItem,
   createSupportItem,
   findVacancyForSupport,
   postPlainUpdate,
@@ -7,7 +9,10 @@ import {
   SUPPORT_FILES_COLUMN_ID,
   SUPPORT_BOARD_URL_PREFIX,
   type SupportFormData,
+  type VacancyMatch,
 } from '@/lib/monday'
+
+export const maxDuration = 60
 
 function escapeHtml(s: string): string {
   return s
@@ -19,7 +24,7 @@ function escapeHtml(s: string): string {
 
 function buildSupportUpdateHtml(
   data: SupportFormData,
-  vacancy: { matchedName: string; pod: string | null } | null,
+  vacancy: VacancyMatch | null,
 ): string {
   const parts: string[] = []
 
@@ -49,8 +54,6 @@ function buildSupportUpdateHtml(
 
   return parts.join('')
 }
-
-export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8)
@@ -86,24 +89,9 @@ export async function POST(req: NextRequest) {
     }
     log('parsed', { name: `${data.firstName} ${data.lastName}`, address: data.address })
 
-    stage = 'match_vacancy'
-    const vacancy = await findVacancyForSupport(data.address).catch((err) => {
-      console.error(`[support ${requestId}] vacancy_lookup_failed:`, err)
-      return null
-    })
-    log('vacancy_matched', {
-      matched: !!vacancy,
-      matchedName: vacancy?.matchedName ?? null,
-      pod: vacancy?.pod ?? null,
-    })
-
     stage = 'create_item'
-    const itemId = await createSupportItem(data, vacancy)
+    const itemId = await createSupportItem(data)
     log('item_created', { itemId })
-
-    stage = 'post_comment_update'
-    await postPlainUpdate(itemId, buildSupportUpdateHtml(data, vacancy))
-    log('comment_posted')
 
     stage = 'upload_file'
     const file = multipart.get('file')
@@ -117,6 +105,41 @@ export async function POST(req: NextRequest) {
       log('no_file')
     }
 
+    // Defer the vacancy match (paginated Monday fetch), POD/link patching,
+    // and the structured update post to Vercel's after() hook so the
+    // applicant sees the success screen immediately. Staff still get the
+    // fully-annotated item ~2-4s later.
+    after(async () => {
+      const bgStart = Date.now()
+      let bgStage = 'match_vacancy'
+      try {
+        const vacancy = await findVacancyForSupport(data.address).catch((err) => {
+          console.error(`[support ${requestId}] vacancy_lookup_failed:`, err)
+          return null
+        })
+        console.log(
+          `[support ${requestId}] bg vacancy_matched matched=${!!vacancy} pod=${vacancy?.pod ?? 'null'} elapsedMs=${Date.now() - bgStart}`,
+        )
+
+        if (vacancy) {
+          bgStage = 'apply_vacancy_columns'
+          await applyVacancyMatchToSupportItem(itemId, vacancy).catch((err) => {
+            console.error(`[support ${requestId}] apply_vacancy_columns_failed:`, err)
+          })
+        }
+
+        bgStage = 'post_update'
+        await postPlainUpdate(itemId, buildSupportUpdateHtml(data, vacancy))
+        console.log(
+          `[support ${requestId}] bg done totalMs=${Date.now() - bgStart}`,
+        )
+      } catch (err) {
+        console.error(
+          `[support ${requestId}] bg FAILED stage=${bgStage} error="${err instanceof Error ? err.message : String(err)}"`,
+        )
+      }
+    })
+
     stage = 'done'
     log('success', { itemId, url: `${SUPPORT_BOARD_URL_PREFIX}${itemId}`, totalMs: Date.now() - startedAt })
 
@@ -124,8 +147,6 @@ export async function POST(req: NextRequest) {
       success: true,
       itemId,
       requestId,
-      matchedProperty: vacancy?.matchedName ?? null,
-      pod: vacancy?.pod ?? null,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
