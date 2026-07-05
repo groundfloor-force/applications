@@ -589,11 +589,24 @@ function normalizeAddress(raw: string): string {
     .trim()
 }
 
-// Match the applicant's free-text address against Vacancy List items.
-// Returns the best-scoring match and its POD, or null if nothing scores.
-export async function findVacancyForSupport(address: string): Promise<VacancyMatch | null> {
-  const needle = normalizeAddress(address)
-  if (!needle) return null
+type VacancyRow = {
+  id: string
+  name: string
+  column_values: { id: string; text: string }[]
+}
+type VacancyPageResp = { cursor: string | null; items: VacancyRow[] }
+
+// In-memory cache of the Vacancy List for support address matching. Vacancies
+// change slowly relative to support-form volume, so a 5-minute TTL cuts the
+// per-submission Monday API round-trip cost from ~2-4s to ~0ms on warm
+// serverless instances. Cache lives per-lambda-instance.
+const VACANCY_CACHE_TTL_MS = 5 * 60 * 1000
+let vacancyCache: { items: VacancyRow[]; fetchedAt: number } | null = null
+
+async function fetchVacancyRows(): Promise<VacancyRow[]> {
+  if (vacancyCache && Date.now() - vacancyCache.fetchedAt < VACANCY_CACHE_TTL_MS) {
+    return vacancyCache.items
+  }
 
   const firstQuery = `
     query {
@@ -612,19 +625,12 @@ export async function findVacancyForSupport(address: string): Promise<VacancyMat
     }
   `
 
-  type Row = {
-    id: string
-    name: string
-    column_values: { id: string; text: string }[]
-  }
-  type Page = { cursor: string | null; items: Row[] }
-
-  const first = await mondayQuery<{ boards: { items_page: Page }[] }>(firstQuery)
-  const items: Row[] = [...(first.boards[0]?.items_page?.items ?? [])]
+  const first = await mondayQuery<{ boards: { items_page: VacancyPageResp }[] }>(firstQuery)
+  const items: VacancyRow[] = [...(first.boards[0]?.items_page?.items ?? [])]
   let cursor = first.boards[0]?.items_page?.cursor ?? null
 
   while (cursor) {
-    const next = await mondayQuery<{ next_items_page: Page }>(`
+    const next = await mondayQuery<{ next_items_page: VacancyPageResp }>(`
       query {
         next_items_page(cursor: "${cursor}", limit: 500) {
           cursor
@@ -642,11 +648,23 @@ export async function findVacancyForSupport(address: string): Promise<VacancyMat
     cursor = next.next_items_page?.cursor ?? null
   }
 
+  vacancyCache = { items, fetchedAt: Date.now() }
+  return items
+}
+
+// Match the applicant's free-text address against Vacancy List items.
+// Returns the best-scoring match and its POD, or null if nothing scores.
+export async function findVacancyForSupport(address: string): Promise<VacancyMatch | null> {
+  const needle = normalizeAddress(address)
+  if (!needle) return null
+
+  const items = await fetchVacancyRows()
+
   // Score = number of needle tokens that appear in the candidate's normalized
   // combined name + mailing address. Requires at least the majority of tokens
   // (and 2+ if the address is more than one token) to avoid spurious matches.
   const needleTokens = needle.split(' ').filter(Boolean)
-  let best: { row: Row; score: number } | null = null
+  let best: { row: VacancyRow; score: number } | null = null
 
   for (const row of items) {
     const mailing = row.column_values.find((c) => c.id === 'text_mkrckabm')?.text ?? ''

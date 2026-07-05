@@ -17,6 +17,39 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function buildSupportUpdateHtml(
+  data: SupportFormData,
+  vacancy: { matchedName: string; pod: string | null } | null,
+): string {
+  const parts: string[] = []
+
+  parts.push(`<h2>📩 Support Request — ${escapeHtml(data.subject)}</h2>`)
+
+  parts.push('<p><b>Submitted by</b></p>')
+  parts.push('<ul>')
+  parts.push(`<li><b>Name:</b> ${escapeHtml(data.firstName)} ${escapeHtml(data.lastName)}</li>`)
+  parts.push(`<li><b>Email:</b> <a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></li>`)
+  parts.push(`<li><b>Phone:</b> ${escapeHtml(data.phone)}</li>`)
+  parts.push(`<li><b>Address:</b> ${escapeHtml(data.address)}</li>`)
+  parts.push('</ul>')
+
+  if (vacancy) {
+    parts.push('<p><b>Matched Property</b></p>')
+    parts.push('<ul>')
+    parts.push(`<li><b>Property:</b> ${escapeHtml(vacancy.matchedName)}</li>`)
+    if (vacancy.pod) parts.push(`<li><b>POD:</b> ${escapeHtml(vacancy.pod)}</li>`)
+    parts.push('</ul>')
+  } else {
+    parts.push('<p><i>No matching property found in the Vacancy List.</i></p>')
+  }
+
+  parts.push('<hr>')
+  parts.push('<h3>💬 Message</h3>')
+  parts.push(`<p>${escapeHtml(data.comment).replace(/\n/g, '<br/>')}</p>`)
+
+  return parts.join('')
+}
+
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
@@ -69,8 +102,7 @@ export async function POST(req: NextRequest) {
     log('item_created', { itemId })
 
     stage = 'post_comment_update'
-    const commentHtml = `<p>${escapeHtml(data.comment).replace(/\n/g, '<br/>')}</p>`
-    await postPlainUpdate(itemId, commentHtml)
+    await postPlainUpdate(itemId, buildSupportUpdateHtml(data, vacancy))
     log('comment_posted')
 
     stage = 'upload_file'
