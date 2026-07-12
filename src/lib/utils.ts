@@ -17,11 +17,24 @@ export interface SavedForm {
   savedAt: number
 }
 
+// File objects can't be serialized — JSON.stringify turns them into `{}`,
+// which then breaks FormData.append() on submit ("parameter 2 is not of
+// type 'Blob'"). Strip every File-bearing field before persisting so the
+// restored state never contains empty-object placeholders.
+const NON_PERSISTED_FIELDS = [
+  'payStubFile',
+  'documents',
+  'occupantDocs',
+  'petPhotos',
+  'cosignerDocs',
+  'supportingDocs',
+  'idDocs',
+] as const
+
 export function saveFormToStorage(step: number, data: Record<string, unknown>): void {
   try {
-    // Never persist File objects
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { payStubFile, ...rest } = data as Record<string, unknown> & { payStubFile?: unknown }
+    const rest = { ...data }
+    for (const field of NON_PERSISTED_FIELDS) delete rest[field]
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, data: rest, savedAt: Date.now() }))
   } catch {
     // Storage full or unavailable — fail silently

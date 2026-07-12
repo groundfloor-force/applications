@@ -377,42 +377,40 @@ export default function ApplicationForm({ config, autofill }: Props) {
     try {
       const formPayload = new FormData()
 
+      // Only append genuine File/Blob objects. Restored-from-localStorage
+      // state can contain empty-object placeholders where Files used to be
+      // (Files don't survive JSON serialization); appending those throws
+      // "parameter 2 is not of type 'Blob'".
+      const appendFile = (key: string, file: unknown) => {
+        if (file instanceof Blob) {
+          formPayload.append(key, file, file instanceof File ? file.name : undefined)
+        }
+      }
+
       // Serialize everything except File arrays
       const { documents, occupantDocs, petPhotos, cosignerDocs, supportingDocs, idDocs, ...rest } = data
       formPayload.append('data', JSON.stringify(rest))
       formPayload.append('locale', locale)
 
       // Primary applicant documents
-      documents.forEach((file, i) => {
-        formPayload.append(`doc_${i}`, file, file.name)
-      })
+      documents.forEach((file, i) => appendFile(`doc_${i}`, file))
 
       // Occupant documents
       occupantDocs.forEach((files, occIdx) => {
-        files.forEach((file, fileIdx) => {
-          formPayload.append(`occdoc_${occIdx}_${fileIdx}`, file, file.name)
-        })
+        files.forEach((file, fileIdx) => appendFile(`occdoc_${occIdx}_${fileIdx}`, file))
       })
 
       // Pet photos
-      petPhotos.forEach((file, i) => {
-        formPayload.append(`petphoto_${i}`, file, file.name)
-      })
+      petPhotos.forEach((file, i) => appendFile(`petphoto_${i}`, file))
 
       // Co-signer proof of income / savings
-      cosignerDocs.forEach((file, i) => {
-        formPayload.append(`cosignerdoc_${i}`, file, file.name)
-      })
+      cosignerDocs.forEach((file, i) => appendFile(`cosignerdoc_${i}`, file))
 
       // Supporting documents (Review step)
-      supportingDocs.forEach((file, i) => {
-        formPayload.append(`supdoc_${i}`, file, file.name)
-      })
+      supportingDocs.forEach((file, i) => appendFile(`supdoc_${i}`, file))
 
       // Government photo ID (optional)
-      idDocs.forEach((file, i) => {
-        formPayload.append(`iddoc_${i}`, file, file.name)
-      })
+      idDocs.forEach((file, i) => appendFile(`iddoc_${i}`, file))
 
       const res = await fetch('/api/submit', { method: 'POST', body: formPayload })
       let result: { error?: string; token?: string; requestId?: string; stage?: string } = {}
