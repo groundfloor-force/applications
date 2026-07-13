@@ -7,6 +7,7 @@ import { QID } from '@/lib/maintenance/ids'
 
 const SECTIONS: { key: string; title: string }[] = [
   { key: 'issue', title: 'The issue' },
+  { key: 'appliance', title: 'Appliance details' },
   { key: 'media', title: 'Photos' },
   { key: 'contact', title: 'Your contact details' },
   { key: 'property', title: 'Property' },

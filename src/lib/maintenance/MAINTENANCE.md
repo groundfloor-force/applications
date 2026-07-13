@@ -57,6 +57,25 @@ first), so it round-trips without a denormalize step.
 > Set `BLOB_READ_WRITE_TOKEN` in Vercel (Storage → Blob) to enable saving.
 > Without it the editor still loads (code default) but Save returns "not configured".
 
+## Workflows
+
+`workflows/water-leak-v1.ts` is the main intake and appends
+`workflows/appliance-v1.ts`. The **appliance** flow is one shared intake that
+branches by appliance and symptom (not five separate systems):
+
+`category = appliance → which appliance → early safety check → (gas/electric for
+stove & dryer) → what is it doing → shared leak / noise sub-flows (or a
+"tell us more" catch-all) → appliance details → usability → shared photo +
+contact tail`.
+
+Safety hazards (gas smell, smoke/sparks, uncontrolled water, overheating,
+tripping breaker) escalate via option `action`s and `goto` straight to
+photos + contact, skipping diagnostics. Common symptoms (leak, noise) reuse one
+sub-flow across appliances; the long tail routes to a single detail question.
+Per-appliance problem lists are `dynamicOptions` on `q_appl_problem`, and their
+option `goto`s work because the engine resolves the chosen option through
+`resolveOptions` (dynamic included).
+
 ## Priority is data (editable)
 
 Severity is no longer hardcoded. Each answer OPTION carries an optional `action`

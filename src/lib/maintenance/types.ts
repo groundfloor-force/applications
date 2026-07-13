@@ -45,6 +45,8 @@ export interface AnswerAction {
   safetyFlags?: string[]
   damageRisk?: DamageRisk
   coordinatorReview?: boolean
+  /** Override the suggested trade (e.g. "Gas-qualified technician"). Last one set wins. */
+  suggestedTrade?: string
 }
 
 export interface AnswerOption {

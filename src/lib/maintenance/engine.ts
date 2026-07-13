@@ -50,10 +50,10 @@ function isVisible(q: Question, answers: AnswerMap): boolean {
 
 /** The immediate next question id per a question's own rules (no visibility skipping). */
 function rawNext(wf: WorkflowDefinition, q: Question, answers: AnswerMap): string {
-  // An explicitly chosen option's `goto` wins.
+  // An explicitly chosen option's `goto` wins (static or dynamic options).
   const chosen = answers[q.id]
-  if (typeof chosen === 'string' && q.options) {
-    const opt = q.options.find((o) => o.value === chosen)
+  if (typeof chosen === 'string') {
+    const opt = resolveOptions(wf, q, answers).find((o) => o.value === chosen)
     if (opt?.goto) return opt.goto
   }
   if (q.next && q.next.length) {

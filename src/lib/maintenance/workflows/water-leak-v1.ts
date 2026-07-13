@@ -21,6 +21,7 @@ import {
   UNSURE_DESC,
   YNU,
 } from '../ids'
+import { applianceQuestions, APPL } from './appliance-v1'
 
 const opt = (value: string, label: string, goto?: string): AnswerOption => ({ value, label, goto })
 
@@ -115,6 +116,7 @@ const questions: Question[] = [
     ],
     next: [
       { when: { questionId: QID.CATEGORY, op: 'eq', value: CATEGORY.PLUMBING }, goto: QID.PLUMBING_TYPE },
+      { when: { questionId: QID.CATEGORY, op: 'eq', value: CATEGORY.APPLIANCE }, goto: APPL.WHICH },
       { goto: QID.FALLBACK_DESC },
     ],
   },
@@ -357,8 +359,8 @@ const questions: Question[] = [
     section: 'media',
     text: 'Add photos of the issue',
     helpText:
-      'Photos help us send the right person with the right parts. Add at least one, or mark that it is ' +
-      'not safe to take a photo.',
+      'Photos help us send the right person with the right parts. For an appliance, a photo of the ' +
+      'model/serial label helps too. Add at least one, or mark that it is not safe to take a photo.',
     inputType: 'photo',
     media: { required: true, minCount: 1, allowUnsafeSkip: true },
     // → q_name (array order)
@@ -437,13 +439,13 @@ const questions: Question[] = [
   { id: QID.BEST_TIMES, section: 'access', text: 'Best available times for us to attend?', inputType: 'short_text', optional: true },
 
   // ── Shared tail — comments (last question → END) ───────────────────────────
-  { id: QID.COMMENTS, section: 'comments', text: 'Anything else you would like to add?', inputType: 'long_text', optional: true },
+  { id: QID.COMMENTS, section: 'comments', text: 'Anything else you would like to add?', inputType: 'long_text', optional: true, next: [{ goto: 'END' }] },
 ]
 
 export const waterLeakWorkflowV1: WorkflowDefinition = {
   id: 'maintenance_intake',
-  version: '1.0.0',
+  version: '1.1.0',
   title: 'Maintenance Request',
   entry: QID.CATEGORY,
-  questions,
+  questions: [...questions, ...applianceQuestions],
 }

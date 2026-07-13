@@ -72,6 +72,7 @@ export function evaluateSeverity(
   const safetyFlags = new Set<string>()
   let damageRisk: Severity['damageRisk'] = 'unknown'
   let coordinatorReview = false
+  let tradeFromAction: string | undefined
 
   // Iterate in workflow order so the earliest emergency wins the emergency type.
   for (const q of workflow.questions) {
@@ -90,9 +91,10 @@ export function evaluateSeverity(
       damageRisk = action.damageRisk
     }
     if (action.coordinatorReview) coordinatorReview = true
+    if (action.suggestedTrade) tradeFromAction = action.suggestedTrade // last set wins
   }
 
-  // Suggested trade — derived from category (kept in code; not answer-editable).
+  // Suggested trade — an explicit option action wins; else derived from category.
   const category = str(answers[QID.CATEGORY])
   let suggestedTrade = 'General Maintenance'
   if (category === CATEGORY.PLUMBING) suggestedTrade = 'Plumber'
@@ -100,6 +102,7 @@ export function evaluateSeverity(
   else if (category === CATEGORY.HVAC) suggestedTrade = 'HVAC Technician'
   else if (category === CATEGORY.APPLIANCE) suggestedTrade = 'Appliance Technician'
   if (safetyFlags.has('water_near_electrical')) suggestedTrade = 'Plumber + Electrician'
+  if (tradeFromAction) suggestedTrade = tradeFromAction
 
   return {
     priority,

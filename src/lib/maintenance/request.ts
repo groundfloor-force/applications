@@ -10,6 +10,7 @@ import type { WorkflowDefinition, EngineState, AnswerValue, QAHistoryEntry, Prio
 import { buildHistory } from './engine'
 import { evaluateSeverity, type Severity } from './priority-rules'
 import { QID, CATEGORY, PLUMBING_TYPE, WATER_FLOW } from './ids'
+import { APPL } from './workflows/appliance-v1'
 
 export interface MaintenanceRequestPayload {
   // Filled by the server at submission:
@@ -111,6 +112,12 @@ export function buildSummary(state: EngineState, severity: Severity): string {
     if (severity.safetyFlags.includes('ceiling_collapse_risk')) {
       parts.push('Ceiling may be at risk of falling.')
     }
+  } else if (category === CATEGORY.APPLIANCE) {
+    const appliance = (label(state, APPL.WHICH) || 'appliance').toLowerCase()
+    const problem = label(state, APPL.PROBLEM) || label(state, APPL.SAFETY)
+    parts.push(`${role} reports an issue with the ${appliance}${problem ? `: ${problem.toLowerCase()}` : ''}.`)
+    const detail = asString(a[APPL.SYMPTOM_DETAIL])
+    if (detail) parts.push(detail)
   } else {
     const desc = asString(a[QID.FALLBACK_DESC])
     parts.push(`${role} reports a ${category || 'maintenance'} issue: ${desc}`)
@@ -131,6 +138,9 @@ function issueTypeOf(state: EngineState): string {
   if (asString(a[QID.CATEGORY]) === CATEGORY.PLUMBING) {
     const pt = label(state, QID.PLUMBING_TYPE)
     return pt || 'Plumbing'
+  }
+  if (asString(a[QID.CATEGORY]) === CATEGORY.APPLIANCE) {
+    return label(state, APPL.WHICH) || 'Appliance'
   }
   return label(state, QID.CATEGORY)
 }

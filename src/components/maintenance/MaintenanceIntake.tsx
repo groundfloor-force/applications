@@ -19,7 +19,7 @@ import QuestionScreen, { type SafetyNote } from './QuestionScreen'
 import ReviewScreen from './ReviewScreen'
 import WelcomeScreen from './WelcomeScreen'
 
-const SECTION_ORDER = ['issue', 'media', 'contact', 'property', 'access', 'comments']
+const SECTION_ORDER = ['issue', 'appliance', 'media', 'contact', 'property', 'access', 'comments']
 
 type Success = { requestId: string; priority: string; emergencyFlag: boolean }
 
