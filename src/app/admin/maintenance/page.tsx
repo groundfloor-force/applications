@@ -12,10 +12,10 @@ interface Row {
   updateHtml: string
 }
 
-const PRIORITY_CLASS: Record<string, string> = {
-  P1: 'bg-red-100 text-red-700',
-  P2: 'bg-amber-100 text-amber-700',
-  P3: 'bg-blue-100 text-blue-700',
+const PRIORITY_TEXT: Record<string, string> = {
+  P1: 'text-red-700',
+  P2: 'text-amber-700',
+  P3: 'text-blue-700',
 }
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -111,7 +111,7 @@ export default function MaintenanceAdminPage() {
                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50"
               >
                 {r.priority && (
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PRIORITY_CLASS[r.priority] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`text-xs font-bold w-7 flex-shrink-0 ${PRIORITY_TEXT[r.priority] ?? 'text-gray-600'}`}>
                     {r.priority}
                   </span>
                 )}

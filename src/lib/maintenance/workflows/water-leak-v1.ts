@@ -369,7 +369,7 @@ const questions: Question[] = [
   },
 
   // ── Shared tail — property ─────────────────────────────────────────────────
-  { id: QID.PROPERTY_ADDRESS, section: 'property', text: 'What is the property address?', inputType: 'address' },
+  { id: QID.PROPERTY_ADDRESS, section: 'property', text: 'What is the property address? (no unit number)', inputType: 'address' },
   { id: QID.UNIT, section: 'property', text: 'Unit number (if applicable)', inputType: 'short_text', optional: true },
   { id: QID.PM_NAME, section: 'property', text: 'Client or property manager name (if known)', inputType: 'short_text', optional: true },
   {
@@ -393,6 +393,8 @@ const questions: Question[] = [
     text: 'Is someone currently at the property?',
     inputType: 'single_choice',
     options: YES_NO,
+    // Only relevant for an active, uncontrolled emergency — skip otherwise.
+    visibleIf: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.UNCONTROLLED },
   },
   {
     id: QID.PERMISSION,

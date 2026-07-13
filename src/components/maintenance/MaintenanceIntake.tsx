@@ -133,6 +133,17 @@ export default function MaintenanceIntake() {
   }
 
   const handleSubmit = async () => {
+    // Vercel rejects request bodies over ~4.5 MB before the function runs, so a
+    // large batch of photos would fail with a cryptic platform error. Guard it
+    // here with actionable guidance instead.
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0)
+    if (totalBytes > 4_000_000) {
+      setSubmitError(
+        'Your photos are too large to upload together (over 4 MB). Please remove one or more photos and try again.',
+      )
+      return
+    }
+
     setSubmitting(true)
     setSubmitError(undefined)
     try {
@@ -174,7 +185,7 @@ export default function MaintenanceIntake() {
   if (success) {
     return (
       <div className="max-w-xl mx-auto text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary-50 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-6 bg-primary-50 flex items-center justify-center">
           <svg className="w-8 h-8 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
@@ -260,7 +271,7 @@ export default function MaintenanceIntake() {
           <span className="text-xs text-brand-gray">{editing ? 'Editing answer' : `Step ${state.path.length + 1}`}</span>
         </div>
         {!editing && (
-          <div className="h-1.5 bg-brand-border rounded-full overflow-hidden">
+          <div className="h-1.5 bg-brand-border overflow-hidden">
             <div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         )}

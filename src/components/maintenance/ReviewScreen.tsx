@@ -42,12 +42,12 @@ export default function ReviewScreen({
   error,
 }: Props) {
   const severity = evaluateSeverity(state.answers)
-  const priorityClass =
+  const priorityText =
     severity.priority === 'P1'
-      ? 'bg-red-100 text-secondary'
+      ? 'text-secondary'
       : severity.priority === 'P2'
-        ? 'bg-amber-100 text-amber-800'
-        : 'bg-primary-50 text-primary-500'
+        ? 'text-amber-700'
+        : 'text-primary-500'
 
   return (
     <div>
@@ -58,20 +58,25 @@ export default function ReviewScreen({
         Please check everything is correct. You can edit any answer before submitting.
       </p>
 
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${priorityClass}`}>
-          {PRIORITY_LABEL[severity.priority]}
-        </span>
+      <div className="mb-6 border border-brand-border rounded-lg divide-y divide-brand-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          <span className="text-sm text-brand-gray">Priority</span>
+          <span className={`text-sm font-semibold ${priorityText}`}>{PRIORITY_LABEL[severity.priority]}</span>
+        </div>
         {severity.emergencyFlag && (
-          <span className="px-3 py-1 rounded-full text-sm font-semibold bg-secondary text-white">
-            {severity.emergencyType ?? 'Emergency'}
-          </span>
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-sm text-brand-gray">Emergency</span>
+            <span className="text-sm font-semibold text-secondary">{severity.emergencyType ?? 'Emergency'}</span>
+          </div>
         )}
-        {severity.safetyFlags.map((f) => (
-          <span key={f} className="px-3 py-1 rounded-full text-xs bg-amber-50 text-amber-800 border border-amber-200">
-            {f.replace(/_/g, ' ')}
-          </span>
-        ))}
+        {severity.safetyFlags.length > 0 && (
+          <div className="px-4 py-3">
+            <span className="text-sm text-brand-gray">Safety flags</span>
+            <p className="text-sm text-amber-700 mt-1">
+              {severity.safetyFlags.map((f) => f.replace(/_/g, ' ')).join(', ')}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">
