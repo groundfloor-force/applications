@@ -17,6 +17,7 @@ import type { AnswerValue, EngineState, WorkflowDefinition } from '@/lib/mainten
 import { loadState, saveState, clearState } from '@/lib/maintenance/persistence'
 import QuestionScreen, { type SafetyNote } from './QuestionScreen'
 import ReviewScreen from './ReviewScreen'
+import WelcomeScreen from './WelcomeScreen'
 
 const SECTION_ORDER = ['issue', 'media', 'contact', 'property', 'access', 'comments']
 
@@ -28,6 +29,7 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
   const [files, setFiles] = useState<File[]>([])
   const [mediaUnsafe, setMediaUnsafe] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
+  const [started, setStarted] = useState(false)
   const [pending, setPending] = useState<AnswerValue>('')
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
@@ -40,6 +42,8 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
     const saved = loadState()
     if (saved && saved.workflowId === wf.id && saved.workflowVersion === wf.version) {
       setState(saved)
+      // Resume a draft in progress straight away — skip the intro.
+      if (saved.path.length > 0 || saved.completed) setStarted(true)
     }
     hydrated.current = true
   }, [])
@@ -128,6 +132,7 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
     setFiles([])
     setMediaUnsafe(false)
     setEditing(null)
+    setStarted(false)
     setSuccess(null)
     setSubmitError(undefined)
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -214,6 +219,11 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
         </button>
       </div>
     )
+  }
+
+  // ── Welcome / intro (only at the very start of a fresh request) ──────────────
+  if (!started) {
+    return <WelcomeScreen onStart={() => setStarted(true)} />
   }
 
   // ── Review (only when not mid-edit) ──────────────────────────────────────────
