@@ -144,11 +144,11 @@ const questions: Question[] = [
     text: 'Is water actively flowing right now?',
     inputType: 'single_choice',
     options: [
-      opt(WATER_FLOW.UNCONTROLLED, 'Yes, and I cannot stop it'),
-      opt(WATER_FLOW.CONTAINED, 'Yes, but I have contained it'),
-      opt(WATER_FLOW.WHEN_USED, 'No, it only leaks when the fixture is used'),
-      opt(WATER_FLOW.DAMAGE_ONLY, 'No, I only see water damage'),
-      opt(WATER_FLOW.UNSURE, 'I am not sure'),
+      { value: WATER_FLOW.UNCONTROLLED, label: 'Yes, and I cannot stop it', action: { setPriority: 'P1', emergency: true, emergencyType: 'Uncontrolled Water', damageRisk: 'high' } },
+      { value: WATER_FLOW.CONTAINED, label: 'Yes, but I have contained it', action: { setPriority: 'P2', damageRisk: 'moderate' } },
+      { value: WATER_FLOW.WHEN_USED, label: 'No, it only leaks when the fixture is used', action: { setPriority: 'P3', damageRisk: 'low' } },
+      { value: WATER_FLOW.DAMAGE_ONLY, label: 'No, I only see water damage', action: { setPriority: 'P2', damageRisk: 'high' } },
+      { value: WATER_FLOW.UNSURE, label: 'I am not sure', action: { setPriority: 'P2' } },
     ],
     next: [
       { when: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.UNCONTROLLED }, goto: QID.NEAR_ELECTRICAL },
@@ -166,7 +166,11 @@ const questions: Question[] = [
     text: 'Is water near electrical outlets, electrical panels, lights, or appliances?',
     inputType: 'single_choice',
     emergencyBanner: true,
-    options: YES_NO_UNSURE,
+    options: [
+      { value: YNU.YES, label: 'Yes', action: { setPriority: 'P1', emergency: true, emergencyType: 'Electrical Hazard', safetyFlags: ['water_near_electrical'] } },
+      { value: YNU.NO, label: 'No' },
+      { value: YNU.UNSURE, label: 'Unsure', action: { setPriority: 'P2', safetyFlags: ['possible_electrical_hazard'] } },
+    ],
     safetyMessages: [
       {
         level: 'danger',
@@ -220,7 +224,11 @@ const questions: Question[] = [
     section: 'issue',
     text: 'Is the leak causing damage to cabinets, walls, ceilings, flooring, or another unit?',
     inputType: 'single_choice',
-    options: YES_NO_UNSURE,
+    options: [
+      { value: YNU.YES, label: 'Yes', action: { damageRisk: 'high' } },
+      { value: YNU.NO, label: 'No' },
+      { value: YNU.UNSURE, label: 'Unsure' },
+    ],
     next: [{ goto: QID.MEDIA }],
   },
 
@@ -261,7 +269,7 @@ const questions: Question[] = [
       opt(LEAK_AMOUNT.DROPS, 'A few drops'),
       opt(LEAK_AMOUNT.SLOW_DRIP, 'A slow drip'),
       opt(LEAK_AMOUNT.SMALL_PUDDLE, 'A small puddle'),
-      opt(LEAK_AMOUNT.LARGE, 'A large amount'),
+      { value: LEAK_AMOUNT.LARGE, label: 'A large amount', action: { setPriority: 'P2', damageRisk: 'moderate' } },
       opt(LEAK_AMOUNT.UNSURE, 'Unsure'),
     ],
     next: [{ goto: QID.MEDIA }],
@@ -298,10 +306,10 @@ const questions: Question[] = [
     text: 'Is the ceiling sagging, bubbling, cracking, or at risk of falling?',
     inputType: 'single_choice',
     options: [
-      opt(CEILING_RISK.YES, 'Yes'),
+      { value: CEILING_RISK.YES, label: 'Yes', action: { setPriority: 'P2', safetyFlags: ['ceiling_collapse_risk'], damageRisk: 'high' } },
       opt(CEILING_RISK.NO, 'No'),
       opt(CEILING_RISK.NA, 'Not applicable'),
-      opt(CEILING_RISK.UNSURE, 'Unsure'),
+      { value: CEILING_RISK.UNSURE, label: 'Unsure', action: { setPriority: 'P2', safetyFlags: ['ceiling_collapse_risk'], damageRisk: 'high' } },
     ],
     safetyMessages: [
       {
@@ -320,11 +328,11 @@ const questions: Question[] = [
     text: 'Which description is closest to what you see?',
     inputType: 'single_choice',
     options: [
-      opt(UNSURE_DESC.FLOWING, 'Water is continuously flowing'),
+      { value: UNSURE_DESC.FLOWING, label: 'Water is continuously flowing', action: { setPriority: 'P2', damageRisk: 'high' } },
       opt(UNSURE_DESC.PUDDLE, 'There is a puddle or wet area'),
       opt(UNSURE_DESC.WHEN_USED, 'Water appears only when something is used'),
       opt(UNSURE_DESC.STAINING, 'There is staining or damage, but no visible water'),
-      opt(UNSURE_DESC.CANNOT_INSPECT, 'I cannot safely inspect the area'),
+      { value: UNSURE_DESC.CANNOT_INSPECT, label: 'I cannot safely inspect the area', action: { setPriority: 'P2', coordinatorReview: true, safetyFlags: ['cannot_safely_inspect'] } },
       opt(UNSURE_DESC.NONE, 'None of these'),
     ],
     next: [{ goto: QID.MEDIA }],

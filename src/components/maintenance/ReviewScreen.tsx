@@ -41,7 +41,7 @@ export default function ReviewScreen({
   submitting,
   error,
 }: Props) {
-  const severity = evaluateSeverity(state.answers)
+  const severity = evaluateSeverity(state.answers, wf)
   const priorityText =
     severity.priority === 'P1'
       ? 'text-secondary'

@@ -41,13 +41,31 @@ ids, every branch/goto/condition resolves) then writes the active blob plus a
 timestamped version snapshot under `maintenance/versions/`.
 
 Admin surfaces (admin-cookie gated):
-- `/admin/maintenance/workflow` — **read-only visual map** of every question and
-  where each answer leads (Stage A). The full editor (add/remove/reorder, rewire
-  branches + priority) is Stage B.
+- `/admin/maintenance/workflow` — **full editor**: a question list you can
+  reorder / add / delete, plus a per-question panel to edit text, options,
+  branching (per-option "goes to" + conditional jumps + default), priority &
+  safety effects, visibility, safety messages, and media. Save validates and
+  writes a new active version + snapshot; "History" restores older versions.
 - `GET/POST /api/admin/maintenance/workflow` — read the active workflow +
   versions; save a validated workflow.
 
+The editor `normalizeWorkflow`s on load — self-referential `when q = value → goto`
+rules become per-option `goto`s so routing reads as "choose X → goes to Y". The
+result is still a valid WorkflowDefinition (the engine checks option `goto`
+first), so it round-trips without a denormalize step.
+
 > Set `BLOB_READ_WRITE_TOKEN` in Vercel (Storage → Blob) to enable saving.
+> Without it the editor still loads (code default) but Save returns "not configured".
+
+## Priority is data (editable)
+
+Severity is no longer hardcoded. Each answer OPTION carries an optional `action`
+(`setPriority`, `emergency`/`emergencyType`, `safetyFlags`, `damageRisk`,
+`coordinatorReview`). `evaluateSeverity(answers, workflow)` merges the actions of
+every chosen option — most-severe priority wins, flags union, emergency type
+from the earliest emergency in the flow — so editing an option's effect in the
+admin changes the computed priority. `suggestedTrade` is still derived in code
+from the category.
 
 **Emergency notify:** P1 submissions call `safeNotify([logProvider, emailProvider])`.
 Email goes to `MAINTENANCE_EMERGENCY_EMAIL` (falls back to `NOTIFICATION_EMAIL`);

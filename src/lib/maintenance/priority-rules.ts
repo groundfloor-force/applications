@@ -1,32 +1,25 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Deterministic severity rules — the single source of truth for priority.
+// Deterministic severity rules — data-driven.
 //
-// This module (and ONLY this module) decides priority, emergency status, safety
-// flags, damage risk, and the suggested trade/response time. It is a pure
-// function of the collected answers, so the client can call it for live UI
-// (the emergency banner) while the server re-runs it authoritatively at submit
-// time — never trusting a client-supplied priority.
+// Priority / emergency / safety are no longer hardcoded here: each answer
+// OPTION carries an `action` (in the workflow definition), and this module
+// merges the actions of every chosen option — most-severe priority wins, flags
+// union, emergency type from the earliest emergency in the flow. That keeps the
+// severity logic editable from the admin while staying deterministic (no AI).
 //
-// No AI, no side effects, no randomness.
+// The server re-runs this at submit time and never trusts a client priority.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { AnswerMap, AnswerValue, Priority } from './types'
-import {
-  QID,
-  WATER_FLOW,
-  LEAK_AMOUNT,
-  YNU,
-  CEILING_RISK,
-  UNSURE_DESC,
-  CATEGORY,
-} from './ids'
+import type { AnswerMap, AnswerValue, Priority, WorkflowDefinition, Question, AnswerOption, DamageRisk } from './types'
+import { waterLeakWorkflowV1 } from './workflows/water-leak-v1'
+import { QID, CATEGORY } from './ids'
 
 export interface Severity {
   priority: Priority
   emergencyFlag: boolean
   emergencyType: string | null
   safetyFlags: string[]
-  damageRisk: 'none' | 'low' | 'moderate' | 'high' | 'unknown'
+  damageRisk: DamageRisk | 'unknown'
   suggestedTrade: string
   suggestedResponseTime: string
   coordinatorReview: boolean
@@ -39,9 +32,7 @@ export function escalate(a: Priority, b: Priority): Priority {
   return RANK[b] > RANK[a] ? b : a
 }
 
-function str(v: AnswerValue): string {
-  return typeof v === 'string' ? v : ''
-}
+const DAMAGE_RANK: Record<string, number> = { unknown: 0, none: 0, low: 1, moderate: 2, high: 3 }
 
 const RESPONSE_TIME: Record<Priority, string> = {
   P1: 'Immediate — dispatch within 1 hour',
@@ -49,11 +40,32 @@ const RESPONSE_TIME: Record<Priority, string> = {
   P3: 'Standard — within 3–5 business days',
 }
 
+function str(v: AnswerValue): string {
+  return typeof v === 'string' ? v : ''
+}
+
+/** Find the chosen option for a question, searching static and dynamic options. */
+function findOption(q: Question, value: string): AnswerOption | undefined {
+  const inStatic = q.options?.find((o) => o.value === value)
+  if (inStatic) return inStatic
+  if (q.dynamicOptions) {
+    for (const set of [...Object.values(q.dynamicOptions.map), q.dynamicOptions.default]) {
+      const hit = set.find((o) => o.value === value)
+      if (hit) return hit
+    }
+  }
+  return undefined
+}
+
 /**
- * Evaluate the full severity profile from the answers collected so far.
- * Safe to call at any point in the flow (missing answers simply don't escalate).
+ * Evaluate the full severity profile from the answers collected so far, using
+ * the option actions defined in `workflow` (defaults to the bundled flow).
+ * Safe to call at any point — missing answers simply don't escalate.
  */
-export function evaluateSeverity(answers: AnswerMap): Severity {
+export function evaluateSeverity(
+  answers: AnswerMap,
+  workflow: WorkflowDefinition = waterLeakWorkflowV1,
+): Severity {
   let priority: Priority = 'P3'
   let emergencyFlag = false
   let emergencyType: string | null = null
@@ -61,81 +73,27 @@ export function evaluateSeverity(answers: AnswerMap): Severity {
   let damageRisk: Severity['damageRisk'] = 'unknown'
   let coordinatorReview = false
 
-  const category = str(answers[QID.CATEGORY])
-  const flow = str(answers[QID.WATER_FLOW])
+  // Iterate in workflow order so the earliest emergency wins the emergency type.
+  for (const q of workflow.questions) {
+    const value = answers[q.id]
+    if (typeof value !== 'string' || !value) continue
+    const action = findOption(q, value)?.action
+    if (!action) continue
 
-  // ── Water status drives the base priority ──────────────────────────────────
-  switch (flow) {
-    case WATER_FLOW.UNCONTROLLED:
-      priority = escalate(priority, 'P1')
+    if (action.setPriority) priority = escalate(priority, action.setPriority)
+    if (action.emergency) {
       emergencyFlag = true
-      emergencyType = 'Uncontrolled Water'
-      damageRisk = 'high'
-      break
-    case WATER_FLOW.CONTAINED:
-      priority = escalate(priority, 'P2')
-      damageRisk = 'moderate'
-      break
-    case WATER_FLOW.WHEN_USED:
-      priority = escalate(priority, 'P3')
-      damageRisk = 'low'
-      break
-    case WATER_FLOW.DAMAGE_ONLY:
-      // Source may be hidden → treat as urgent.
-      priority = escalate(priority, 'P2')
-      damageRisk = 'high'
-      break
-    case WATER_FLOW.UNSURE:
-      priority = escalate(priority, 'P2')
-      break
+      if (action.emergencyType && !emergencyType) emergencyType = action.emergencyType
+    }
+    action.safetyFlags?.forEach((f) => safetyFlags.add(f))
+    if (action.damageRisk && DAMAGE_RANK[action.damageRisk] > DAMAGE_RANK[damageRisk]) {
+      damageRisk = action.damageRisk
+    }
+    if (action.coordinatorReview) coordinatorReview = true
   }
 
-  // ── Branch-specific escalations ────────────────────────────────────────────
-
-  // Large leak, even if only when used, becomes urgent.
-  if (flow === WATER_FLOW.WHEN_USED && str(answers[QID.LEAK_AMOUNT]) === LEAK_AMOUNT.LARGE) {
-    priority = escalate(priority, 'P2')
-    damageRisk = 'moderate'
-  }
-
-  // Contained leak that is spreading damage.
-  if (flow === WATER_FLOW.CONTAINED && str(answers[QID.DAMAGE_SPREAD]) === YNU.YES) {
-    damageRisk = 'high'
-  }
-
-  // Water near electrical equipment is a life-safety emergency.
-  const nearElec = str(answers[QID.NEAR_ELECTRICAL])
-  if (nearElec === YNU.YES) {
-    priority = escalate(priority, 'P1')
-    emergencyFlag = true
-    if (!emergencyType) emergencyType = 'Electrical Hazard'
-    safetyFlags.add('water_near_electrical')
-  } else if (nearElec === YNU.UNSURE) {
-    priority = escalate(priority, 'P2')
-    safetyFlags.add('possible_electrical_hazard')
-  }
-
-  // Sagging / at-risk ceiling.
-  const ceiling = str(answers[QID.CEILING_RISK])
-  if (ceiling === CEILING_RISK.YES || ceiling === CEILING_RISK.UNSURE) {
-    priority = escalate(priority, 'P2')
-    damageRisk = 'high'
-    safetyFlags.add('ceiling_collapse_risk')
-  }
-
-  // Unsure branch — "cannot safely inspect" routes to a coordinator.
-  const unsure = str(answers[QID.UNSURE_DESC])
-  if (unsure === UNSURE_DESC.CANNOT_INSPECT) {
-    priority = escalate(priority, 'P2')
-    coordinatorReview = true
-    safetyFlags.add('cannot_safely_inspect')
-  } else if (unsure === UNSURE_DESC.FLOWING) {
-    // Continuously flowing but unquantified → keep at least urgent.
-    priority = escalate(priority, 'P2')
-    damageRisk = 'high'
-  }
-
-  // ── Trade suggestion ───────────────────────────────────────────────────────
+  // Suggested trade — derived from category (kept in code; not answer-editable).
+  const category = str(answers[QID.CATEGORY])
   let suggestedTrade = 'General Maintenance'
   if (category === CATEGORY.PLUMBING) suggestedTrade = 'Plumber'
   else if (category === CATEGORY.ELECTRICAL) suggestedTrade = 'Electrician'

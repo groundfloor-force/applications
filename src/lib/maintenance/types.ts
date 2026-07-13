@@ -31,6 +31,22 @@ export type AnswerValue = string | string[] | boolean | null
 /** All answers collected so far, keyed by question id. */
 export type AnswerMap = Record<string, AnswerValue>
 
+export type DamageRisk = 'none' | 'low' | 'moderate' | 'high'
+
+/**
+ * The severity effect of choosing an answer. This is what makes priority
+ * data-driven and editable — evaluateSeverity() collects the actions of every
+ * chosen option and merges them (most-severe priority wins, flags union).
+ */
+export interface AnswerAction {
+  setPriority?: Priority
+  emergency?: boolean
+  emergencyType?: string
+  safetyFlags?: string[]
+  damageRisk?: DamageRisk
+  coordinatorReview?: boolean
+}
+
 export interface AnswerOption {
   /** Stable machine value referenced by rules/conditions. Never change these. */
   value: string
@@ -38,6 +54,8 @@ export interface AnswerOption {
   label: string
   /** Optional direct routing when this option is chosen (wins over question.next). */
   goto?: string
+  /** Severity effect of choosing this option (priority, emergency, safety flags). */
+  action?: AnswerAction
 }
 
 // ── Conditions ───────────────────────────────────────────────────────────────

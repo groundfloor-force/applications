@@ -150,7 +150,7 @@ export function buildRequestPayload(
   wf: WorkflowDefinition,
   state: EngineState,
 ): MaintenanceRequestPayload {
-  const severity = evaluateSeverity(state.answers)
+  const severity = evaluateSeverity(state.answers, wf)
   return {
     id: null,
     createdAt: null,
