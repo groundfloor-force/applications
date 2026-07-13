@@ -40,8 +40,10 @@ export default function WelcomeScreen({ onStart }: { onStart: () => void }) {
 
       <div className="border-l-4 border-secondary bg-red-50 px-4 py-3 mb-8">
         <p className="text-sm text-brand-dark">
-          <span className="text-secondary" style={{ fontWeight: 700 }}>If anyone is in danger, call 911 first.</span>{' '}
-          For an active flood or another urgent emergency, submit this request right away and we’ll be alerted immediately.
+          <span className="text-secondary" style={{ fontWeight: 700 }}>Do not submit a request for emergencies.</span>{' '}
+          If anyone is in danger, call 911. For any maintenance emergency — such as an active flood, no heat, or a
+          gas leak — call us right away at{' '}
+          <a href="tel:+15062048440" className="text-secondary" style={{ fontWeight: 700 }}>506&nbsp;204&nbsp;8440</a>.
         </p>
       </div>
 
