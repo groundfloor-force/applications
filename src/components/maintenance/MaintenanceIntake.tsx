@@ -130,6 +130,7 @@ export default function MaintenanceIntake() {
     setEditing(null)
     setSuccess(null)
     setSubmitError(undefined)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSubmit = async () => {
@@ -208,8 +209,8 @@ export default function MaintenanceIntake() {
             Reference: <span className="font-mono">{success.requestId}</span>
           </p>
         )}
-        <button type="button" onClick={reset} className="btn-secondary mt-8">
-          Submit another request
+        <button type="button" onClick={reset} className="btn-primary px-8 py-4 mt-8">
+          Start a new work order
         </button>
       </div>
     )

@@ -15,10 +15,10 @@ without rewriting the engine or the screens.
 | Path | Responsibility |
 |------|----------------|
 | `src/app/maintenance/page.tsx` | Public page shell → renders the intake. |
-| `src/components/maintenance/MaintenanceIntake.tsx` | Client orchestrator — drives the engine, one screen at a time, localStorage resume, review, submit. |
+| `src/components/maintenance/MaintenanceIntake.tsx` | Client orchestrator — drives the engine, one screen at a time, sessionStorage resume, review, submit. |
 | `src/components/maintenance/QuestionScreen.tsx` | Renders a single question by input type (big buttons, inputs, photo uploader, safety notes, emergency banner). |
 | `src/components/maintenance/ReviewScreen.tsx` | Grouped review with per-answer edit + priority/safety badges. |
-| `src/lib/maintenance/persistence.ts` | localStorage save/load; strips the photo answer (Files can't serialise). |
+| `src/lib/maintenance/persistence.ts` | sessionStorage save/load; strips the photo answer (Files can't serialise). |
 | `src/app/api/maintenance/route.ts` | Server: **recomputes severity** (never trusts the client), creates the Monday item, uploads photos, posts the Q&A update, fires emergency notifications, defers the property match. |
 | `src/app/admin/maintenance/page.tsx` + `src/app/api/admin/maintenance/route.ts` | Internal review view (admin-cookie gated), reads guided requests off the CORE board. |
 

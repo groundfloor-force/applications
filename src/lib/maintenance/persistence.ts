@@ -1,10 +1,13 @@
 // Client-side session persistence for the maintenance intake flow.
 //
-// The engine state is plain JSON and safe to persist — EXCEPT photo answers,
-// which reference in-memory File objects that cannot survive serialisation
-// (JSON.stringify turns a File into `{}`, which later crashes FormData). We
-// therefore strip the photo answer before saving; on resume the review screen
-// re-prompts for photos. Text answers survive a refresh.
+// Uses sessionStorage (NOT localStorage) on purpose: an accidental page reload
+// restores the in-progress answers, but closing the tab / leaving and coming
+// back later starts a completely fresh request. This matches the expectation
+// that revisiting the page is a new work order, not a resumed draft.
+//
+// Photo answers are stripped before saving — they reference in-memory File
+// objects that cannot survive serialisation (JSON.stringify turns a File into
+// `{}`, which later crashes FormData). Text answers survive a reload.
 
 import type { EngineState } from './types'
 import { QID } from './ids'
@@ -25,7 +28,7 @@ function stripMedia(state: EngineState): EngineState {
 export function saveState(state: EngineState): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(stripMedia(state)))
+    window.sessionStorage.setItem(KEY, JSON.stringify(stripMedia(state)))
   } catch {
     // Storage full / unavailable — non-fatal, the flow still works in-memory.
   }
@@ -34,7 +37,7 @@ export function saveState(state: EngineState): void {
 export function loadState(): EngineState | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = window.localStorage.getItem(KEY)
+    const raw = window.sessionStorage.getItem(KEY)
     if (!raw) return null
     return JSON.parse(raw) as EngineState
   } catch {
@@ -45,7 +48,7 @@ export function loadState(): EngineState | null {
 export function clearState(): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.removeItem(KEY)
+    window.sessionStorage.removeItem(KEY)
   } catch {
     // ignore
   }
