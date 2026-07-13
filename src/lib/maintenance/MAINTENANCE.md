@@ -6,9 +6,29 @@ time**; the next question depends on prior answers. Domain knowledge lives in
 never in the UI. This is what lets us add new workflows (e.g. "Clogged Toilet")
 without rewriting the engine or the screens.
 
-> **Status:** Stage 1 ships the reusable foundation — engine, rules, the full
-> Active Water Leak workflow, and tests. The mobile UI, submission API, media
-> upload, and admin view are Stage 2.
+> **Status:** Stage 2 shipped. The guided intake UI, submission API, photo
+> upload, and internal admin view are live at `/maintenance` and
+> `/admin/maintenance`. Video upload and a queryable database remain future work.
+
+## Runtime pieces (Stage 2)
+
+| Path | Responsibility |
+|------|----------------|
+| `src/app/maintenance/page.tsx` | Public page shell → renders the intake. |
+| `src/components/maintenance/MaintenanceIntake.tsx` | Client orchestrator — drives the engine, one screen at a time, localStorage resume, review, submit. |
+| `src/components/maintenance/QuestionScreen.tsx` | Renders a single question by input type (big buttons, inputs, photo uploader, safety notes, emergency banner). |
+| `src/components/maintenance/ReviewScreen.tsx` | Grouped review with per-answer edit + priority/safety badges. |
+| `src/lib/maintenance/persistence.ts` | localStorage save/load; strips the photo answer (Files can't serialise). |
+| `src/app/api/maintenance/route.ts` | Server: **recomputes severity** (never trusts the client), creates the Monday item, uploads photos, posts the Q&A update, fires emergency notifications, defers the property match. |
+| `src/app/admin/maintenance/page.tsx` + `src/app/api/admin/maintenance/route.ts` | Internal review view (admin-cookie gated), reads guided requests off the CORE board. |
+
+**Editing on review** uses `reviseAnswer`, which only re-walks/prunes downstream
+answers when the new answer actually changes the branch — editing a photo or a
+phone number keeps everything else.
+
+**Emergency notify:** P1 submissions call `safeNotify([logProvider, emailProvider])`.
+Email goes to `MAINTENANCE_EMERGENCY_EMAIL` (falls back to `NOTIFICATION_EMAIL`);
+without `RESEND_API_KEY` it no-ops. A notify failure never blocks the request.
 
 ## Files
 

@@ -1,4 +1,5 @@
 import type { Property, FormData } from './types'
+import type { MaintenanceRequestPayload } from './maintenance/request'
 
 const MONDAY_API_URL = 'https://api.monday.com/v2'
 const APPLICATIONS_BOARD_ID = 640654033
@@ -761,72 +762,64 @@ export const SUPPORT_BOARD_URL_PREFIX = `https://groundfloor-force.monday.com/bo
 const MAINTENANCE_BOARD_ID = 9200285810
 const MAINTENANCE_GROUP_NEW = 'topics' // "New Requests"
 
-export interface MaintenanceFormData {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  address: string
-  subject: string
-  comment: string
-  priority: string // 'Emergency' | 'Urgent' | 'Routine' | ''
-  category: string // one of the Request Type labels below, or ''
-  permission: string // one of the Permission to Enter labels below, or ''
+// A stable phrase embedded in every guided-intake update, used to identify
+// app-submitted requests when reading the board back for the admin view.
+export const MAINTENANCE_UPDATE_MARKER = 'Guided Intake Request'
+
+// Priority → the board's 1-5 star "Priority" rating column.
+const PRIORITY_RATING: Record<string, number> = { P1: 5, P2: 3, P3: 1 }
+
+// Guided category label → EXISTING "Request Type" (color_mkr5qx2c) labels only.
+// Categories without a matching label are left unset (detail stays in the update).
+const CATEGORY_TO_REQUEST_TYPE: Record<string, string> = {
+  Plumbing: 'Plumbing',
+  Electrical: 'Electrical',
+  Appliance: 'Appliance Repair',
+  'General handyman': 'Handyman',
 }
 
-// Tenant-facing priority → the board's 1-5 star "Priority" rating column.
-const MAINTENANCE_PRIORITY_RATING: Record<string, number> = {
-  Emergency: 5,
-  Urgent: 3,
-  Routine: 1,
+// Guided permission label → the board's dropdown_mks3z9g2 labels (exact strings).
+const PERMISSION_TO_DROPDOWN: Record<string, string> = {
+  Yes: '✅ Yes - Access any time.',
+  No: '❌ No - Do not enter. Contact me to schedule.',
+  'Contact me first': '❌ No - Do not enter. Contact me to schedule.',
+  'Not applicable': 'Other',
 }
 
-// Issue categories the form offers. These map 1:1 to EXISTING "Request Type"
-// (color_mkr5qx2c) labels on the live board — do not add labels the board
-// doesn't already have or Monday rejects the mutation.
-export const MAINTENANCE_CATEGORIES = [
-  'Plumbing',
-  'Electrical',
-  'Appliance Repair',
-  'Handyman',
-  'Outdoor Works',
-  'Renovations',
-] as const
+function splitName(full: string): { first: string; last: string } {
+  const parts = full.trim().split(/\s+/)
+  if (parts.length <= 1) return { first: full.trim(), last: '' }
+  return { first: parts[0], last: parts.slice(1).join(' ') }
+}
 
-// Permission-to-enter options mirror the board's dropdown_mks3z9g2 labels exactly.
-export const MAINTENANCE_PERMISSIONS = [
-  '✅ Yes - Access any time.',
-  '✅ Yes - Notice appreciated but not required.',
-  '❌ No - Do not enter. Contact me to schedule.',
-  'Other',
-] as const
-
-export async function createMaintenanceItem(data: MaintenanceFormData): Promise<string> {
-  const itemName = `${data.subject.trim()} = ${data.address.trim()}`.slice(0, 250)
+/** Create a CORE Master Pipeline item from a guided maintenance request payload. */
+export async function createGuidedMaintenanceItem(
+  payload: MaintenanceRequestPayload,
+): Promise<string> {
+  const addr = [payload.property.address, payload.property.unit ? `#${payload.property.unit}` : '']
+    .filter(Boolean)
+    .join(' ')
+  const itemName = `[${payload.priority}] ${payload.issueType} — ${addr || 'Address pending'}`.slice(0, 250)
+  const { first, last } = splitName(payload.contact.name)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cv: Record<string, any> = {
-    text_mkrw29qj: data.firstName,
-    text_mksa14cc: data.lastName,
-    text_mks5jhmk: data.email,
-    phone_mks5t8rd: { phone: data.phone, countryShortName: 'CA' },
-    long_text_mks5m4ks: data.comment,
+    text_mkrw29qj: first,
+    text_mksa14cc: last,
+    text_mks5jhmk: payload.contact.email,
+    phone_mks5t8rd: { phone: payload.contact.phone, countryShortName: 'CA' },
+    long_text_mks5m4ks: [payload.summary, payload.description].filter(Boolean).join('\n\n'),
     date4: { date: new Date().toISOString().split('T')[0] },
     status: { label: 'New' }, // Ops. Status
     color_mks9a2es: { label: 'Public_form' }, // Helper-Status = source
+    rating_mm3kbn0z: { rating: PRIORITY_RATING[payload.priority] ?? 1 },
   }
 
-  if (data.category && (MAINTENANCE_CATEGORIES as readonly string[]).includes(data.category)) {
-    cv.color_mkr5qx2c = { label: data.category } // Request Type
-  }
+  const requestType = CATEGORY_TO_REQUEST_TYPE[payload.category]
+  if (requestType) cv.color_mkr5qx2c = { label: requestType }
 
-  if (data.priority && MAINTENANCE_PRIORITY_RATING[data.priority] != null) {
-    cv.rating_mm3kbn0z = { rating: MAINTENANCE_PRIORITY_RATING[data.priority] }
-  }
-
-  if (data.permission && (MAINTENANCE_PERMISSIONS as readonly string[]).includes(data.permission)) {
-    cv.dropdown_mks3z9g2 = { labels: [data.permission] }
-  }
+  const permissionLabel = PERMISSION_TO_DROPDOWN[payload.permissionToEnter]
+  if (permissionLabel) cv.dropdown_mks3z9g2 = { labels: [permissionLabel] }
 
   const mutation = `
     mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
@@ -847,6 +840,67 @@ export async function createMaintenanceItem(data: MaintenanceFormData): Promise<
   })
 
   return result.create_item.id
+}
+
+export interface GuidedMaintenanceRow {
+  id: string
+  name: string
+  url: string
+  createdAt: string
+  status: string
+  priority: string
+  updateHtml: string
+}
+
+const RATING_TO_PRIORITY: Record<string, string> = { '5': 'P1', '3': 'P2', '1': 'P3' }
+
+/**
+ * Read recent guided-intake maintenance requests off the CORE board for the
+ * internal admin review view. Identifies app submissions by the update marker.
+ */
+export async function fetchGuidedMaintenanceRequests(limit = 100): Promise<GuidedMaintenanceRow[]> {
+  const query = `
+    query {
+      boards(ids: [${MAINTENANCE_BOARD_ID}]) {
+        items_page(limit: ${limit}) {
+          items {
+            id
+            name
+            created_at
+            column_values(ids: ["status", "rating_mm3kbn0z"]) { id text }
+            updates(limit: 5) { body text_body created_at }
+          }
+        }
+      }
+    }
+  `
+  type Row = {
+    id: string
+    name: string
+    created_at: string
+    column_values: { id: string; text: string }[]
+    updates: { body: string; text_body: string; created_at: string }[]
+  }
+  const data = await mondayQuery<{ boards: { items_page: { items: Row[] } }[] }>(query)
+  const items = data.boards[0]?.items_page?.items ?? []
+
+  const rows: GuidedMaintenanceRow[] = []
+  for (const it of items) {
+    const update = it.updates.find((u) => (u.text_body ?? '').includes(MAINTENANCE_UPDATE_MARKER))
+    if (!update) continue // not an app-submitted guided request
+    const status = it.column_values.find((c) => c.id === 'status')?.text ?? ''
+    const ratingText = it.column_values.find((c) => c.id === 'rating_mm3kbn0z')?.text ?? ''
+    rows.push({
+      id: it.id,
+      name: it.name,
+      url: `${MAINTENANCE_BOARD_URL_PREFIX}${it.id}`,
+      createdAt: it.created_at,
+      status,
+      priority: RATING_TO_PRIORITY[ratingText] ?? '',
+      updateHtml: update.body,
+    })
+  }
+  return rows
 }
 
 // Backfill the matched Vacancy/property onto an existing maintenance item via the

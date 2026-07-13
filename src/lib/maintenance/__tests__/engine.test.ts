@@ -4,6 +4,7 @@ import {
   answer,
   goBack,
   editAnswer,
+  reviseAnswer,
   serialize,
   deserialize,
 } from '../engine'
@@ -97,6 +98,39 @@ describe('question engine navigation', () => {
     const res = answer(wf, s, 'not_a_real_option')
     expect(res.error).toBeTruthy()
     expect(res.state.currentQuestionId).toBe(QID.CATEGORY)
+  })
+
+  it('reviseAnswer keeps downstream answers when the branch is unchanged', () => {
+    const done = drive(wf, {
+      [QID.CATEGORY]: CATEGORY.PLUMBING,
+      [QID.PLUMBING_TYPE]: PLUMBING_TYPE.LEAK,
+      [QID.WATER_FLOW]: WATER_FLOW.CONTAINED,
+      [QID.NAME]: 'Jordan Tenant',
+      [QID.EMAIL]: 'jordan@example.com',
+    })
+    expect(done.completed).toBe(true)
+
+    // Editing the name (non-branching) must NOT wipe the email collected later.
+    const res = reviseAnswer(wf, done, QID.NAME, 'Jordan Renter')
+    expect(res.error).toBeUndefined()
+    expect(res.state.answers[QID.NAME]).toBe('Jordan Renter')
+    expect(res.state.answers[QID.EMAIL]).toBe('jordan@example.com')
+    expect(res.state.completed).toBe(true) // still at review
+  })
+
+  it('reviseAnswer re-walks and prunes when the branch diverges', () => {
+    const done = drive(wf, {
+      [QID.CATEGORY]: CATEGORY.PLUMBING,
+      [QID.PLUMBING_TYPE]: PLUMBING_TYPE.LEAK,
+      [QID.WATER_FLOW]: WATER_FLOW.CONTAINED,
+    })
+    expect(done.answers[QID.CONTAINMENT]).toBeDefined()
+
+    // Change water status to "when used" → contained-branch answers must drop.
+    const res = reviseAnswer(wf, done, QID.WATER_FLOW, WATER_FLOW.WHEN_USED)
+    expect(res.state.answers[QID.CONTAINMENT]).toBeUndefined()
+    expect(res.state.completed).toBe(false)
+    expect(res.state.currentQuestionId).toBe(QID.FIXTURE)
   })
 
   it('pet-details question is skipped when there are no pets', () => {

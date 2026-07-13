@@ -145,6 +145,54 @@ export async function sendFailureNotificationEmail(
   })
 }
 
+// ── Maintenance emergency notification ────────────────────────────────────────
+
+export async function sendEmergencyMaintenanceEmail(
+  notificationEmail: string,
+  params: {
+    requestId: string
+    priority: string
+    emergencyType: string | null
+    summary: string
+    property: string
+    contactName: string
+    contactPhone: string
+    safetyFlags: string[]
+    mondayItemUrl: string
+  },
+): Promise<void> {
+  if (!notificationEmail) return
+
+  const flags = params.safetyFlags.length
+    ? params.safetyFlags.map((f) => f.replace(/_/g, ' ')).join(', ')
+    : 'none'
+
+  await send({
+    to: [notificationEmail],
+    subject: `🚨 ${params.priority} EMERGENCY maintenance: ${params.emergencyType ?? 'Urgent'} — ${params.property || 'Unknown property'}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 640px; margin: 0 auto; color: #333;">
+        <div style="background: #DC3545; padding: 20px 32px;">
+          <h1 style="color: white; margin: 0; font-size: 18px;">${params.priority} Emergency Maintenance Request</h1>
+        </div>
+        <div style="padding: 24px 32px;">
+          <p style="font-size: 15px;">${params.summary}</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 6px 0; color: #555; width: 160px;">Emergency type</td><td style="padding: 6px 0; font-weight: 600;">${params.emergencyType ?? '—'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Property</td><td style="padding: 6px 0; font-weight: 600;">${params.property || '—'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Contact</td><td style="padding: 6px 0;">${params.contactName || '—'} · ${params.contactPhone || '—'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Safety flags</td><td style="padding: 6px 0; color: #DC3545;">${flags}</td></tr>
+            <tr><td style="padding: 6px 0; color: #555;">Reference</td><td style="padding: 6px 0; font-family: monospace;">${params.requestId}</td></tr>
+          </table>
+          <a href="${params.mondayItemUrl}" style="display: inline-block; background: #005EAD; color: white; padding: 12px 28px; border-radius: 25px; text-decoration: none; font-weight: 600;">
+            View in Monday.com →
+          </a>
+        </div>
+      </div>
+    `,
+  })
+}
+
 // ── Staff notification ────────────────────────────────────────────────────────
 
 export async function sendNotificationEmail(

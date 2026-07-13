@@ -281,6 +281,63 @@ export function editAnswer(
   }
 }
 
+/**
+ * Revise an already-answered question in place (used by the review screen's
+ * "edit"). Unlike editAnswer, this does NOT blindly discard downstream answers:
+ * it only truncates and re-walks when the new answer actually changes the branch
+ * (i.e. the next question diverges from what already followed). Editing a
+ * non-branching answer — a photo, a phone number — keeps everything else.
+ */
+export function reviseAnswer(
+  wf: WorkflowDefinition,
+  state: EngineState,
+  questionId: string,
+  value: AnswerValue,
+): AnswerResult {
+  const q = getQuestion(wf, questionId)
+  if (!q) return { state, error: 'Unknown question.' }
+
+  const options = resolveOptions(wf, q, state.answers)
+  const check = validateAnswer(q, options, value)
+  if (!check.ok) return { state, error: check.error }
+
+  const prev = state.answers[questionId]
+  const answers: AnswerMap = { ...state.answers, [questionId]: value }
+  const labels = { ...state.labels, [questionId]: labelForValue(options, value) }
+
+  const changed = JSON.stringify(prev) !== JSON.stringify(value)
+  if (!changed) return { state: { ...state, answers, labels } }
+
+  const idx = state.path.indexOf(questionId)
+  if (idx === -1) return { state: { ...state, answers, labels } }
+
+  const existingNext = state.path[idx + 1] ?? END
+  const newNext = selectNext(wf, q, answers)
+
+  // Branch unchanged downstream — keep all later answers, stay where we were.
+  if (newNext === existingNext) return { state: { ...state, answers, labels } }
+
+  // Branch diverged — truncate after this question and re-walk from the new next.
+  const keptPath = state.path.slice(0, idx + 1)
+  for (const key of Object.keys(answers)) {
+    if (!keptPath.includes(key)) {
+      delete answers[key]
+      delete labels[key]
+    }
+  }
+  const completed = newNext === END
+  return {
+    state: {
+      ...state,
+      path: keptPath,
+      answers,
+      labels,
+      currentQuestionId: completed ? null : newNext,
+      completed,
+    },
+  }
+}
+
 /** The ordered question-and-answer history for the branch actually taken. */
 export function buildHistory(wf: WorkflowDefinition, state: EngineState): QAHistoryEntry[] {
   return state.path.map((id) => {

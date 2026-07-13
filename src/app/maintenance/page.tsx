@@ -1,5 +1,5 @@
 import { getConfig } from '@/lib/config'
-import MaintenanceForm from '@/components/MaintenanceForm'
+import MaintenanceIntake from '@/components/maintenance/MaintenanceIntake'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +16,7 @@ export default async function MaintenancePage() {
       </header>
 
       <main className="flex-1 px-4 py-10 sm:py-16">
-        <MaintenanceForm />
+        <MaintenanceIntake />
       </main>
 
       <footer className="border-t border-brand-border bg-white py-6 text-center text-sm text-brand-gray">
