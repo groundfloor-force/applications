@@ -13,6 +13,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
     "@fontsource-variable/mona-sans": "^5.2.8",
+    "@vercel/blob": "^2.6.1",
     "jspdf": "^4.2.1",
     "next": "^15.3.1",
     "react": "^19.0.0",

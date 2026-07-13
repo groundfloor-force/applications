@@ -26,6 +26,29 @@ without rewriting the engine or the screens.
 answers when the new answer actually changes the branch — editing a photo or a
 phone number keeps everything else.
 
+## Editable workflow (Vercel Blob)
+
+The bundled `workflows/water-leak-v1.ts` is the **seed/fallback**. At runtime the
+app loads the *active* workflow via `getActiveWorkflow()` (`workflow-store.ts`):
+
+- If `BLOB_READ_WRITE_TOKEN` is set and a saved workflow exists in Vercel Blob
+  (`maintenance/workflow-active.json`), that is served.
+- Otherwise it falls back to the code default — so the form never breaks if Blob
+  is unconfigured or a stored blob is corrupt (it's re-validated on read).
+
+`saveActiveWorkflow()` validates (`validate-workflow.ts` — entry exists, unique
+ids, every branch/goto/condition resolves) then writes the active blob plus a
+timestamped version snapshot under `maintenance/versions/`.
+
+Admin surfaces (admin-cookie gated):
+- `/admin/maintenance/workflow` — **read-only visual map** of every question and
+  where each answer leads (Stage A). The full editor (add/remove/reorder, rewire
+  branches + priority) is Stage B.
+- `GET/POST /api/admin/maintenance/workflow` — read the active workflow +
+  versions; save a validated workflow.
+
+> Set `BLOB_READ_WRITE_TOKEN` in Vercel (Storage → Blob) to enable saving.
+
 **Emergency notify:** P1 submissions call `safeNotify([logProvider, emailProvider])`.
 Email goes to `MAINTENANCE_EMERGENCY_EMAIL` (falls back to `NOTIFICATION_EMAIL`);
 without `RESEND_API_KEY` it no-ops. A notify failure never blocks the request.

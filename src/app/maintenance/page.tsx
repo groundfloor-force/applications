@@ -1,10 +1,12 @@
 import { getConfig } from '@/lib/config'
 import MaintenanceIntake from '@/components/maintenance/MaintenanceIntake'
+import { getActiveWorkflow } from '@/lib/maintenance/workflow-store'
 
 export const dynamic = 'force-dynamic'
 
 export default async function MaintenancePage() {
   const config = await getConfig()
+  const workflow = await getActiveWorkflow()
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col">
@@ -16,7 +18,7 @@ export default async function MaintenancePage() {
       </header>
 
       <main className="flex-1 px-4 py-10 sm:py-16">
-        <MaintenanceIntake />
+        <MaintenanceIntake workflow={workflow} />
       </main>
 
       <footer className="border-t border-brand-border bg-white py-6 text-center text-sm text-brand-gray">

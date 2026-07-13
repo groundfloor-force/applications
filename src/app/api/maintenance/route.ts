@@ -11,7 +11,7 @@ import {
   MAINTENANCE_UPDATE_MARKER,
 } from '@/lib/monday'
 import { sendEmergencyMaintenanceEmail } from '@/lib/email'
-import { waterLeakWorkflowV1 as wf } from '@/lib/maintenance/workflows/water-leak-v1'
+import { getActiveWorkflow } from '@/lib/maintenance/workflow-store'
 import { buildRequestPayload, type MaintenanceRequestPayload } from '@/lib/maintenance/request'
 import { safeNotify, logProvider, type NotificationProvider } from '@/lib/maintenance/notifications'
 import type { EngineState } from '@/lib/maintenance/types'
@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing intake state', requestId }, { status: 400 })
     }
     const state = JSON.parse(raw) as EngineState
+    const wf = await getActiveWorkflow()
     if (state.workflowId !== wf.id) {
       return NextResponse.json({ error: 'Unknown workflow', requestId }, { status: 400 })
     }

@@ -92,7 +92,10 @@ export default function MaintenanceAdminPage() {
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-heading text-lg font-semibold text-gray-800">Maintenance Requests</h1>
-          <span className="text-sm text-gray-400">{rows.length} guided requests</span>
+          <div className="flex items-center gap-4">
+            <a href="/admin/maintenance/workflow" className="text-sm text-primary-500 hover:underline">Workflow map →</a>
+            <span className="text-sm text-gray-400 hidden sm:inline">{rows.length} guided requests</span>
+          </div>
         </div>
       </header>
 

@@ -12,9 +12,8 @@ import {
   UNSAFE_SKIP,
 } from '@/lib/maintenance/engine'
 import { evalPredicate } from '@/lib/maintenance/conditions'
-import { waterLeakWorkflowV1 as wf } from '@/lib/maintenance/workflows/water-leak-v1'
 import { QID } from '@/lib/maintenance/ids'
-import type { AnswerValue, EngineState } from '@/lib/maintenance/types'
+import type { AnswerValue, EngineState, WorkflowDefinition } from '@/lib/maintenance/types'
 import { loadState, saveState, clearState } from '@/lib/maintenance/persistence'
 import QuestionScreen, { type SafetyNote } from './QuestionScreen'
 import ReviewScreen from './ReviewScreen'
@@ -23,7 +22,8 @@ const SECTION_ORDER = ['issue', 'media', 'contact', 'property', 'access', 'comme
 
 type Success = { requestId: string; priority: string; emergencyFlag: boolean }
 
-export default function MaintenanceIntake() {
+export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefinition }) {
+  const wf = workflow
   const [state, setState] = useState<EngineState>(() => startSession(wf))
   const [files, setFiles] = useState<File[]>([])
   const [mediaUnsafe, setMediaUnsafe] = useState(false)
