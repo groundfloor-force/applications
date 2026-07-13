@@ -755,3 +755,125 @@ export async function applyVacancyMatchToSupportItem(
 
 export const SUPPORT_FILES_COLUMN_ID = 'file_mm33ek9z'
 export const SUPPORT_BOARD_URL_PREFIX = `https://groundfloor-force.monday.com/boards/${SUPPORT_BOARD_ID}/pulses/`
+
+// ── Maintenance Board (CORE Master Pipeline) ─────────────────────────────────
+
+const MAINTENANCE_BOARD_ID = 9200285810
+const MAINTENANCE_GROUP_NEW = 'topics' // "New Requests"
+
+export interface MaintenanceFormData {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  address: string
+  subject: string
+  comment: string
+  priority: string // 'Emergency' | 'Urgent' | 'Routine' | ''
+  category: string // one of the Request Type labels below, or ''
+  permission: string // one of the Permission to Enter labels below, or ''
+}
+
+// Tenant-facing priority → the board's 1-5 star "Priority" rating column.
+const MAINTENANCE_PRIORITY_RATING: Record<string, number> = {
+  Emergency: 5,
+  Urgent: 3,
+  Routine: 1,
+}
+
+// Issue categories the form offers. These map 1:1 to EXISTING "Request Type"
+// (color_mkr5qx2c) labels on the live board — do not add labels the board
+// doesn't already have or Monday rejects the mutation.
+export const MAINTENANCE_CATEGORIES = [
+  'Plumbing',
+  'Electrical',
+  'Appliance Repair',
+  'Handyman',
+  'Outdoor Works',
+  'Renovations',
+] as const
+
+// Permission-to-enter options mirror the board's dropdown_mks3z9g2 labels exactly.
+export const MAINTENANCE_PERMISSIONS = [
+  '✅ Yes - Access any time.',
+  '✅ Yes - Notice appreciated but not required.',
+  '❌ No - Do not enter. Contact me to schedule.',
+  'Other',
+] as const
+
+export async function createMaintenanceItem(data: MaintenanceFormData): Promise<string> {
+  const itemName = `${data.subject.trim()} = ${data.address.trim()}`.slice(0, 250)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cv: Record<string, any> = {
+    text_mkrw29qj: data.firstName,
+    text_mksa14cc: data.lastName,
+    text_mks5jhmk: data.email,
+    phone_mks5t8rd: { phone: data.phone, countryShortName: 'CA' },
+    long_text_mks5m4ks: data.comment,
+    date4: { date: new Date().toISOString().split('T')[0] },
+    status: { label: 'New' }, // Ops. Status
+    color_mks9a2es: { label: 'Public_form' }, // Helper-Status = source
+  }
+
+  if (data.category && (MAINTENANCE_CATEGORIES as readonly string[]).includes(data.category)) {
+    cv.color_mkr5qx2c = { label: data.category } // Request Type
+  }
+
+  if (data.priority && MAINTENANCE_PRIORITY_RATING[data.priority] != null) {
+    cv.rating_mm3kbn0z = { rating: MAINTENANCE_PRIORITY_RATING[data.priority] }
+  }
+
+  if (data.permission && (MAINTENANCE_PERMISSIONS as readonly string[]).includes(data.permission)) {
+    cv.dropdown_mks3z9g2 = { labels: [data.permission] }
+  }
+
+  const mutation = `
+    mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
+      create_item(
+        board_id: $boardId
+        group_id: $groupId
+        item_name: $itemName
+        column_values: $columnValues
+      ) { id }
+    }
+  `
+
+  const result = await mondayQuery<{ create_item: { id: string } }>(mutation, {
+    boardId: String(MAINTENANCE_BOARD_ID),
+    groupId: MAINTENANCE_GROUP_NEW,
+    itemName,
+    columnValues: JSON.stringify(cv),
+  })
+
+  return result.create_item.id
+}
+
+// Backfill the matched Vacancy/property onto an existing maintenance item via the
+// "Property Link" board_relation. Deferred so the applicant isn't blocked by the
+// paginated Vacancy fetch. Reuses findVacancyForSupport() for matching.
+export async function applyVacancyMatchToMaintenanceItem(
+  itemId: string,
+  vacancy: VacancyMatch,
+): Promise<void> {
+  if (!vacancy.itemId) return
+  const mutation = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
+      change_multiple_column_values(
+        board_id: $boardId
+        item_id: $itemId
+        column_values: $columnValues
+      ) { id }
+    }
+  `
+  await mondayQuery(mutation, {
+    boardId: String(MAINTENANCE_BOARD_ID),
+    itemId: String(itemId),
+    columnValues: JSON.stringify({
+      board_relation_mks9xwzr: { item_ids: [Number(vacancy.itemId)] },
+    }),
+  })
+}
+
+export const MAINTENANCE_FILES_COLUMN_ID = 'file_mkrwbk1w' // Pics/Files
+export const MAINTENANCE_BOARD_URL_PREFIX = `https://groundfloor-force.monday.com/boards/${MAINTENANCE_BOARD_ID}/pulses/`
