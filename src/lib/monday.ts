@@ -1,6 +1,14 @@
 import type { Property, FormData } from './types'
 import type { MaintenanceRequestPayload } from './maintenance/request'
 
+// Monday's phone column rejects formatted numbers (spaces, dashes, parens).
+// Reduce to digits only, dropping a North-American leading "1".
+function sanitizePhone(raw: string): string {
+  let digits = (raw || '').replace(/\D/g, '')
+  if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1)
+  return digits
+}
+
 const MONDAY_API_URL = 'https://api.monday.com/v2'
 const APPLICATIONS_BOARD_ID = 640654033
 const VACANCY_BOARD_ID = 469686343
@@ -699,7 +707,7 @@ export async function createSupportItem(data: SupportFormData): Promise<string> 
     text: data.firstName,
     text_mkytg1vg: data.lastName,
     text_mkytj9q0: data.email,
-    phone: { phone: data.phone, countryShortName: 'CA' },
+    phone: { phone: sanitizePhone(data.phone), countryShortName: 'CA' },
     short_texts3qc1dzd: data.address,
     date6: { date: new Date().toISOString().split('T')[0] },
   }
@@ -807,7 +815,7 @@ export async function createGuidedMaintenanceItem(
     text_mkrw29qj: first,
     text_mksa14cc: last,
     text_mks5jhmk: payload.contact.email,
-    phone_mks5t8rd: { phone: payload.contact.phone, countryShortName: 'CA' },
+    phone_mks5t8rd: { phone: sanitizePhone(payload.contact.phone), countryShortName: 'CA' },
     long_text_mks5m4ks: [payload.summary, payload.description].filter(Boolean).join('\n\n'),
     date4: { date: new Date().toISOString().split('T')[0] },
     status: { label: 'New' }, // Ops. Status

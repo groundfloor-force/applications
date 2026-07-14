@@ -24,19 +24,25 @@ const PRIORITY_LABEL: Record<string, string> = {
 interface Props {
   wf: WorkflowDefinition
   state: EngineState
-  files: File[]
-  mediaUnsafe: boolean
+  filesByQ: Record<string, File[]>
+  unsafeByQ: Record<string, boolean>
   onEdit: (questionId: string) => void
   onSubmit: () => void
   submitting: boolean
   error?: string
 }
 
+function mediaSummary(files: File[], unsafe: boolean): string {
+  if (unsafe) return 'Marked unsafe to photograph'
+  if (files.length > 0) return `${files.length} photo${files.length > 1 ? 's' : ''} attached`
+  return 'None added'
+}
+
 export default function ReviewScreen({
   wf,
   state,
-  files,
-  mediaUnsafe,
+  filesByQ,
+  unsafeByQ,
   onEdit,
   onSubmit,
   submitting,
@@ -92,11 +98,7 @@ export default function ReviewScreen({
                 </h3>
                 <div className="flex items-center justify-between gap-4 border border-brand-border rounded-xl px-4 py-3">
                   <span className="text-brand-dark text-sm">
-                    {mediaUnsafe
-                      ? 'Marked unsafe to photograph'
-                      : files.length > 0
-                        ? `${files.length} photo${files.length > 1 ? 's' : ''} attached`
-                        : 'No photos added yet'}
+                    {mediaSummary(filesByQ[QID.MEDIA] ?? [], !!unsafeByQ[QID.MEDIA])}
                   </span>
                   <button type="button" onClick={() => onEdit(QID.MEDIA)} className="text-sm text-primary-500 hover:underline flex-shrink-0">
                     Edit
@@ -108,8 +110,15 @@ export default function ReviewScreen({
 
           const rows = state.path
             .filter((id) => getQuestion(wf, id)?.section === section.key)
-            .map((id) => ({ id, q: getQuestion(wf, id), label: state.labels[id] || String(state.answers[id] ?? '') }))
-            .filter((r) => r.q && (r.label?.trim() ?? '') !== '')
+            .map((id) => {
+              const q = getQuestion(wf, id)
+              const isMedia = q?.inputType === 'photo' || q?.inputType === 'video'
+              const label = isMedia
+                ? mediaSummary(filesByQ[id] ?? [], !!unsafeByQ[id])
+                : state.labels[id] || String(state.answers[id] ?? '')
+              return { id, q, label, isMedia }
+            })
+            .filter((r) => r.q && (r.isMedia || (r.label?.trim() ?? '') !== ''))
 
           if (rows.length === 0) return null
 

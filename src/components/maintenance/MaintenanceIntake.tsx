@@ -12,7 +12,6 @@ import {
   UNSAFE_SKIP,
 } from '@/lib/maintenance/engine'
 import { evalPredicate } from '@/lib/maintenance/conditions'
-import { QID } from '@/lib/maintenance/ids'
 import type { AnswerValue, EngineState, WorkflowDefinition } from '@/lib/maintenance/types'
 import { loadState, saveState, clearState } from '@/lib/maintenance/persistence'
 import QuestionScreen, { type SafetyNote } from './QuestionScreen'
@@ -26,8 +25,9 @@ type Success = { requestId: string; priority: string; emergencyFlag: boolean }
 export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefinition }) {
   const wf = workflow
   const [state, setState] = useState<EngineState>(() => startSession(wf))
-  const [files, setFiles] = useState<File[]>([])
-  const [mediaUnsafe, setMediaUnsafe] = useState(false)
+  // Photos are kept per-question (Files can't live in the engine state).
+  const [filesByQ, setFilesByQ] = useState<Record<string, File[]>>({})
+  const [unsafeByQ, setUnsafeByQ] = useState<Record<string, boolean>>({})
   const [editing, setEditing] = useState<string | null>(null)
   const [started, setStarted] = useState(false)
   const [pending, setPending] = useState<AnswerValue>('')
@@ -48,13 +48,15 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
     hydrated.current = true
   }, [])
 
-  // Persist after every change (persistence strips the photo answer).
+  // Persist after every change (persistence strips photo answers).
   useEffect(() => {
-    if (hydrated.current) saveState(state)
+    if (hydrated.current) saveState(state, wf)
   }, [state])
 
   const activeQuestion = editing ? getQuestion(wf, editing) : currentQuestion(wf, state)
   const activeId = editing ?? state.currentQuestionId
+  const curFiles = activeId ? (filesByQ[activeId] ?? []) : []
+  const curUnsafe = activeId ? (unsafeByQ[activeId] ?? false) : false
   const options = useMemo(
     () => (activeQuestion ? resolveOptions(wf, activeQuestion, state.answers) : []),
     [activeQuestion, state.answers],
@@ -67,7 +69,6 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
     const existing = state.answers[q.id]
     if (q.inputType === 'multi_choice') setPending(Array.isArray(existing) ? existing : [])
     else setPending(typeof existing === 'string' ? existing : '')
-    if (q.id === QID.MEDIA) setMediaUnsafe(existing === UNSAFE_SKIP)
     setError(undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId])
@@ -105,8 +106,8 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
 
   const handleContinue = () => {
     if (!activeQuestion) return
-    if (activeQuestion.id === QID.MEDIA) {
-      commit(mediaUnsafe ? UNSAFE_SKIP : files.map((f) => f.name))
+    if (activeQuestion.inputType === 'photo' || activeQuestion.inputType === 'video') {
+      commit(curUnsafe ? UNSAFE_SKIP : curFiles.map((f) => f.name))
       return
     }
     commit(pending)
@@ -129,8 +130,8 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
   const reset = () => {
     clearState()
     setState(startSession(wf))
-    setFiles([])
-    setMediaUnsafe(false)
+    setFilesByQ({})
+    setUnsafeByQ({})
     setEditing(null)
     setStarted(false)
     setSuccess(null)
@@ -139,10 +140,13 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
   }
 
   const handleSubmit = async () => {
+    // Gather every photo across all photo questions on the taken path.
+    const allFiles = state.path.flatMap((qid) => filesByQ[qid] ?? [])
+
     // Vercel rejects request bodies over ~4.5 MB before the function runs, so a
     // large batch of photos would fail with a cryptic platform error. Guard it
     // here with actionable guidance instead.
-    const totalBytes = files.reduce((sum, f) => sum + f.size, 0)
+    const totalBytes = allFiles.reduce((sum, f) => sum + f.size, 0)
     if (totalBytes > 4_000_000) {
       setSubmitError(
         'Your photos are too large to upload together (over 4 MB). Please remove one or more photos and try again.',
@@ -153,16 +157,18 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
     setSubmitting(true)
     setSubmitError(undefined)
     try {
-      const submitState: EngineState = {
-        ...state,
-        answers: {
-          ...state.answers,
-          [QID.MEDIA]: mediaUnsafe ? UNSAFE_SKIP : files.map((f) => f.name),
-        },
+      const answers = { ...state.answers }
+      for (const qid of state.path) {
+        const q = getQuestion(wf, qid)
+        if (q && (q.inputType === 'photo' || q.inputType === 'video')) {
+          answers[qid] = unsafeByQ[qid] ? UNSAFE_SKIP : (filesByQ[qid] ?? []).map((f) => f.name)
+        }
       }
+      const submitState: EngineState = { ...state, answers }
+
       const payload = new FormData()
       payload.append('state', JSON.stringify(submitState))
-      files.forEach((f) => payload.append('files', f, f.name))
+      allFiles.forEach((f) => payload.append('files', f, f.name))
 
       const res = await fetch('/api/maintenance', { method: 'POST', body: payload })
       let result: { requestId?: string; priority?: string; emergencyFlag?: boolean; error?: string } = {}
@@ -243,8 +249,8 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
         <ReviewScreen
           wf={wf}
           state={state}
-          files={files}
-          mediaUnsafe={mediaUnsafe}
+          filesByQ={filesByQ}
+          unsafeByQ={unsafeByQ}
           onEdit={handleEdit}
           onSubmit={handleSubmit}
           submitting={submitting}
@@ -260,7 +266,8 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
   const sectionIdx = Math.max(0, SECTION_ORDER.indexOf(activeQuestion.section ?? 'issue'))
   const progress = Math.round(((sectionIdx + 0.5) / SECTION_ORDER.length) * 100)
 
-  const mediaReady = activeQuestion.id === QID.MEDIA ? mediaUnsafe || files.length > 0 : true
+  const isMediaQ = activeQuestion.inputType === 'photo' || activeQuestion.inputType === 'video'
+  const mediaReady = !isMediaQ ? true : activeQuestion.optional ? true : curUnsafe || curFiles.length > 0
   const continueDisabled =
     (activeQuestion.inputType === 'multi_choice' && (!Array.isArray(pending) || pending.length === 0)) || !mediaReady
 
@@ -294,10 +301,10 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
         value={pending}
         onChange={setPending}
         onSelectChoice={handleSelectChoice}
-        files={files}
-        onFilesChange={setFiles}
-        mediaUnsafe={mediaUnsafe}
-        onMediaUnsafeChange={setMediaUnsafe}
+        files={curFiles}
+        onFilesChange={(f) => activeId && setFilesByQ((p) => ({ ...p, [activeId]: f }))}
+        mediaUnsafe={curUnsafe}
+        onMediaUnsafeChange={(v) => activeId && setUnsafeByQ((p) => ({ ...p, [activeId]: v }))}
         safetyNotes={safetyNotes}
         error={error}
       />

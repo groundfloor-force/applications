@@ -318,10 +318,13 @@ export const applianceQuestions: Question[] = [
   {
     id: APPL.BRAND_MODEL,
     section: 'appliance',
-    text: 'Appliance brand and model number (if you can find it)',
-    helpText: 'It’s usually on a label inside the door, on the back, or along an edge.',
-    inputType: 'short_text',
+    text: 'Photo of the model / serial label',
+    helpText:
+      'Instead of typing the numbers, just snap a photo of the label — it’s usually inside the door, ' +
+      'on the back, or along an edge. You can skip this if you can’t find it.',
+    inputType: 'photo',
     optional: true,
+    media: { required: false, allowUnsafeSkip: false },
     next: [{ goto: APPL.AGE }],
   },
   {

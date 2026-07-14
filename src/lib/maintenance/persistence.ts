@@ -9,26 +9,28 @@
 // objects that cannot survive serialisation (JSON.stringify turns a File into
 // `{}`, which later crashes FormData). Text answers survive a reload.
 
-import type { EngineState } from './types'
-import { QID } from './ids'
+import type { EngineState, WorkflowDefinition } from './types'
 
 const KEY = 'gfpm_maintenance_intake_v1'
 
-function stripMedia(state: EngineState): EngineState {
+function stripMedia(state: EngineState, wf: WorkflowDefinition): EngineState {
   const answers = { ...state.answers }
   const labels = { ...state.labels }
-  // Keep the 'UNSAFE_SKIP' sentinel (a string), drop any file-list answer.
-  if (Array.isArray(answers[QID.MEDIA])) {
-    delete answers[QID.MEDIA]
-    delete labels[QID.MEDIA]
+  // Photo/video answers reference in-memory Files that can't be serialised —
+  // drop them (any 'UNSAFE_SKIP' string stays, that survives fine).
+  for (const q of wf.questions) {
+    if ((q.inputType === 'photo' || q.inputType === 'video') && Array.isArray(answers[q.id])) {
+      delete answers[q.id]
+      delete labels[q.id]
+    }
   }
   return { ...state, answers, labels }
 }
 
-export function saveState(state: EngineState): void {
+export function saveState(state: EngineState, wf: WorkflowDefinition): void {
   if (typeof window === 'undefined') return
   try {
-    window.sessionStorage.setItem(KEY, JSON.stringify(stripMedia(state)))
+    window.sessionStorage.setItem(KEY, JSON.stringify(stripMedia(state, wf)))
   } catch {
     // Storage full / unavailable — non-fatal, the flow still works in-memory.
   }
