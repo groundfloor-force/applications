@@ -1,5 +1,6 @@
 import type { Property, FormData } from './types'
 import type { MaintenanceRequestPayload } from './maintenance/request'
+import { buildNoticeColumnValues, noticeItemName, type NoticeFormData } from './notices'
 
 // Monday's phone column rejects formatted numbers (spaces, dashes, parens).
 // Reduce to digits only, dropping a North-American leading "1".
@@ -939,3 +940,86 @@ export async function applyVacancyMatchToMaintenanceItem(
 
 export const MAINTENANCE_FILES_COLUMN_ID = 'file_mkrwbk1w' // Pics/Files
 export const MAINTENANCE_BOARD_URL_PREFIX = `https://groundfloor-force.monday.com/boards/${MAINTENANCE_BOARD_ID}/pulses/`
+
+// ── Notices Board (Notice to Vacate) ─────────────────────────────────────────
+
+const NOTICES_BOARD_ID = 442889260
+const NOTICES_GROUP_UNPROCESSED = 'topics'
+const UNITS_BOARD_ID = 18355167955
+
+export const NOTICES_SIGNATURE_COLUMN_ID = 'signature'
+export const NOTICES_BOARD_URL_PREFIX = `https://groundfloor-force.monday.com/boards/${NOTICES_BOARD_ID}/pulses/`
+
+export interface UnitOption {
+  id: string
+  name: string
+}
+
+// The Units board holds ~1,400 items; only the "Active" group is offered to
+// tenants. Cached per lambda instance like the vacancy list.
+let unitsCache: { at: number; units: UnitOption[] } | null = null
+const UNITS_CACHE_MS = 5 * 60 * 1000
+
+export async function fetchActiveUnits(): Promise<UnitOption[]> {
+  if (unitsCache && Date.now() - unitsCache.at < UNITS_CACHE_MS) return unitsCache.units
+
+  type UnitsPage = { cursor: string | null; items: { id: string; name: string }[] }
+  const first = await mondayQuery<{ boards: { groups: { items_page: UnitsPage }[] }[] }>(`
+    query {
+      boards(ids: [${UNITS_BOARD_ID}]) {
+        groups(ids: ["topics"]) {
+          items_page(limit: 500) {
+            cursor
+            items { id name }
+          }
+        }
+      }
+    }
+  `)
+
+  const page = first.boards[0]?.groups?.[0]?.items_page
+  const items = [...(page?.items ?? [])]
+  let cursor = page?.cursor ?? null
+
+  while (cursor) {
+    const next = await mondayQuery<{ next_items_page: UnitsPage }>(
+      `query($cursor: String!) {
+        next_items_page(cursor: $cursor, limit: 500) {
+          cursor
+          items { id name }
+        }
+      }`,
+      { cursor }
+    )
+    items.push(...(next.next_items_page?.items ?? []))
+    cursor = next.next_items_page?.cursor ?? null
+  }
+
+  const units = items
+    .map((i) => ({ id: i.id, name: i.name.trim() }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))
+  unitsCache = { at: Date.now(), units }
+  return units
+}
+
+export async function createNoticeItem(data: NoticeFormData): Promise<string> {
+  const mutation = `
+    mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
+      create_item(
+        board_id: $boardId
+        group_id: $groupId
+        item_name: $itemName
+        column_values: $columnValues
+      ) { id }
+    }
+  `
+
+  const result = await mondayQuery<{ create_item: { id: string } }>(mutation, {
+    boardId: String(NOTICES_BOARD_ID),
+    groupId: NOTICES_GROUP_UNPROCESSED,
+    itemName: noticeItemName(data),
+    columnValues: JSON.stringify(buildNoticeColumnValues(data)),
+  })
+
+  return result.create_item.id
+}
