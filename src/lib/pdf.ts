@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf'
 import type { FormData } from './types'
 
 export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occupantDocs'>): Buffer {
-  const doc = new jsPDF({ unit: 'mm', format: 'letter' })
+  const doc = new jsPDF({ unit: 'mm', format: 'letter', compress: true })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 20
   const contentWidth = pageWidth - margin * 2
@@ -29,15 +29,17 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
   }
 
   function label(lbl: string, val: string) {
-    checkPage()
     doc.setFontSize(9)
+    const valueWidth = contentWidth - 55
+    const lines: string[] = doc.splitTextToSize(val || '—', valueWidth)
+    checkPage(lines.length * 5 + 1)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(100, 112, 141)
     doc.text(lbl, margin, y)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(17, 17, 17)
-    doc.text(val || '—', margin + 55, y)
-    y += 6
+    doc.text(lines, margin + 55, y)
+    y += Math.max(1, lines.length) * 5 + 1
   }
 
   function spacer(h = 4) { y += h }
@@ -203,7 +205,7 @@ export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occup
     try {
       const sigW = 80
       const sigH = 30
-      doc.addImage(data.signatureData, 'PNG', margin, y, sigW, sigH)
+      doc.addImage(data.signatureData, 'PNG', margin, y, sigW, sigH, undefined, 'FAST')
       y += sigH + 4
     } catch {
       // ignore image failures so PDF still generates
@@ -237,7 +239,7 @@ export function generateCosignerAddendumPdf(input: {
     phone: string
   }
 }): Buffer {
-  const doc = new jsPDF({ unit: 'mm', format: 'letter' })
+  const doc = new jsPDF({ unit: 'mm', format: 'letter', compress: true })
   const margin = 20
   let y = 20
 
@@ -321,7 +323,7 @@ export function generateCosignerAddendumPdf(input: {
 // ── Blank printable application ──────────────────────────────────────────────
 
 export function generateBlankApplicationPdf(): Buffer {
-  const doc = new jsPDF({ unit: 'mm', format: 'letter' })
+  const doc = new jsPDF({ unit: 'mm', format: 'letter', compress: true })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 18
