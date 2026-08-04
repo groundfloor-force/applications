@@ -1,4 +1,5 @@
 import type { WorkflowDefinition, Question, Condition } from '@/lib/maintenance/types'
+import { SECTION_ORDER } from '@/lib/maintenance/sections'
 
 export const INPUT_TYPES = [
   'single_choice', 'multi_choice', 'yes_no', 'short_text', 'long_text',
@@ -16,7 +17,7 @@ export const OPS: { value: Condition['op']; label: string }[] = [
   { value: 'unanswered', label: 'is not answered' },
 ]
 
-export const SECTIONS = ['issue', 'media', 'contact', 'property', 'access', 'comments']
+export const SECTIONS = SECTION_ORDER
 
 /** Deep clone (workflows are plain JSON). */
 export function clone<T>(x: T): T {

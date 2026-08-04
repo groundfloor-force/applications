@@ -39,9 +39,12 @@ function Label({ children }: { children: React.ReactNode }) {
 export default function WorkflowEditor({
   initial,
   initialVersions,
+  builtIn,
 }: {
   initial: WorkflowDefinition
   initialVersions: VersionRef[]
+  /** The workflow that ships with the code — see `loadBuiltIn` below. */
+  builtIn?: WorkflowDefinition | null
 }) {
   const [wf, setWf] = useState<WorkflowDefinition>(() => normalizeWorkflow(initial))
   const [selected, setSelected] = useState(0)
@@ -183,7 +186,31 @@ export default function WorkflowEditor({
     }
   }
 
+  /**
+   * Replace the editor's contents with the workflow that ships with the code.
+   *
+   * Once anything has been saved from this editor, the saved copy wins over the
+   * code on the public form — permanently. So when a developer adds a category
+   * or reworks a question, this is how that change actually reaches tenants:
+   * load the built-in default, review it, Save. Any edits made only in this
+   * editor and not mirrored in the code will be lost, hence the confirm.
+   */
+  function loadBuiltIn() {
+    if (!builtIn) return
+    if (!confirm(
+      'Replace the editor contents with the built-in workflow that ships with the app?\n\n' +
+      'Use this to pick up new questions or categories added in the code. Any changes made only ' +
+      'here (and not in the code) will be lost. Nothing changes on the public form until you Save.',
+    )) return
+    setWf(normalizeWorkflow(builtIn))
+    setSelected(0)
+    setDirty(true)
+    setErrors([])
+    setStatus(`Loaded the built-in workflow (v${builtIn.version}, ${builtIn.questions.length} questions) — review and Save to make it live.`)
+  }
+
   const isChoice = CHOICE_TYPES.has(q.inputType)
+  const builtInIsNewer = !!builtIn && builtIn.version !== wf.version
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -196,6 +223,15 @@ export default function WorkflowEditor({
               {wf.title} · v{wf.version} · {wf.questions.length} questions{dirty && ' · unsaved changes'}
             </p>
           </div>
+          {builtIn && (
+            <button
+              onClick={loadBuiltIn}
+              title={`Built-in workflow: v${builtIn.version}, ${builtIn.questions.length} questions`}
+              className="text-sm text-gray-500 hover:text-gray-800"
+            >
+              Load built-in{builtInIsNewer && <span className="ml-1 text-primary-500">· v{builtIn.version}</span>}
+            </button>
+          )}
           <button onClick={() => setShowVersions((s) => !s)} className="text-sm text-gray-500 hover:text-gray-800">
             History ({versions.length})
           </button>

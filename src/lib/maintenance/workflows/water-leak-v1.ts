@@ -1,32 +1,23 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Workflow: Maintenance intake v1
+// Water leak — the deepest branch of the intake. Reached from
+// `q_plumbing_type = leak`, and jumped into directly from other modules
+// (broken fixture → `q_water_flow`, wall/ceiling water damage →
+// `q_damage_location`).
 //
-// Category selection → Plumbing issue type → Active Water Leak (full dynamic
-// flow) → shared tail (media, contact, property, access, comments). Non-plumbing
-// categories and non-leak plumbing issues route to a basic fallback description.
+// Five branches off "is water actively flowing right now":
+//   uncontrolled → near-electrical → source → photos      (P1 emergency)
+//   contained    → source → containment → damage spread   (P2)
+//   when used    → fixture → location → amount            (P3, escalates)
+//   damage only  → location → wet? → ceiling risk         (P2)
+//   unsure       → closest description                    (P2)
 //
 // This file is DATA. All branching lives in `next` rules and option `goto`s;
-// all severity lives in priority-rules.ts. To add a new workflow, copy this
-// shape — you should not need to touch the engine or the UI. See MAINTENANCE.md.
+// all severity lives in per-option `action`s. See MAINTENANCE.md.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { AnswerOption, Question, WorkflowDefinition } from '../types'
-import {
-  QID,
-  CATEGORY,
-  PLUMBING_TYPE,
-  WATER_FLOW,
-  LEAK_AMOUNT,
-  CEILING_RISK,
-  UNSURE_DESC,
-  YNU,
-} from '../ids'
-import { applianceQuestions, APPL } from './appliance-v1'
-
-const opt = (value: string, label: string, goto?: string): AnswerOption => ({ value, label, goto })
-
-const YES_NO: AnswerOption[] = [opt('yes', 'Yes'), opt('no', 'No')]
-const YES_NO_UNSURE: AnswerOption[] = [opt(YNU.YES, 'Yes'), opt(YNU.NO, 'No'), opt(YNU.UNSURE, 'Unsure')]
+import type { AnswerOption, Question } from '../types'
+import { QID, WATER_FLOW, LEAK_AMOUNT, CEILING_RISK, UNSURE_DESC, YNU } from '../ids'
+import { opt, YES_NO_UNSURE } from './shared'
 
 // Shared leak-location list used for "where is the water coming from".
 const SOURCE_OPTIONS: AnswerOption[] = [
@@ -97,48 +88,7 @@ const GENERIC_LOCATION = [
   opt('unsure', 'Unsure'),
 ]
 
-const questions: Question[] = [
-  // ── Selection ──────────────────────────────────────────────────────────────
-  {
-    id: QID.CATEGORY,
-    section: 'issue',
-    text: 'What type of issue are you reporting?',
-    inputType: 'single_choice',
-    options: [
-      opt(CATEGORY.PLUMBING, 'Plumbing'),
-      opt(CATEGORY.ELECTRICAL, 'Electrical'),
-      opt(CATEGORY.APPLIANCE, 'Appliance'),
-      opt(CATEGORY.HVAC, 'Heating or cooling'),
-      opt(CATEGORY.DOOR_LOCK, 'Door or lock'),
-      opt(CATEGORY.WALLS_CEILINGS, 'Walls or ceilings'),
-      opt(CATEGORY.HANDYMAN, 'General handyman'),
-      opt(CATEGORY.OTHER, 'Other'),
-    ],
-    next: [
-      { when: { questionId: QID.CATEGORY, op: 'eq', value: CATEGORY.PLUMBING }, goto: QID.PLUMBING_TYPE },
-      { when: { questionId: QID.CATEGORY, op: 'eq', value: CATEGORY.APPLIANCE }, goto: APPL.WHICH },
-      { goto: QID.FALLBACK_DESC },
-    ],
-  },
-  {
-    id: QID.PLUMBING_TYPE,
-    section: 'issue',
-    text: 'What type of plumbing problem are you reporting?',
-    inputType: 'single_choice',
-    options: [
-      opt(PLUMBING_TYPE.LEAK, 'Leak'),
-      opt(PLUMBING_TYPE.CLOG, 'Clog'),
-      opt(PLUMBING_TYPE.NO_WATER, 'No water'),
-      opt(PLUMBING_TYPE.LOW_PRESSURE, 'Low water pressure'),
-      opt(PLUMBING_TYPE.BROKEN_FIXTURE, 'Broken fixture'),
-      opt(PLUMBING_TYPE.OTHER, 'Other'),
-    ],
-    next: [
-      { when: { questionId: QID.PLUMBING_TYPE, op: 'eq', value: PLUMBING_TYPE.LEAK }, goto: QID.WATER_FLOW },
-      { goto: QID.FALLBACK_DESC },
-    ],
-  },
-
+export const waterLeakQuestions: Question[] = [
   // ── Active water leak — root ───────────────────────────────────────────────
   {
     id: QID.WATER_FLOW,
@@ -146,18 +96,11 @@ const questions: Question[] = [
     text: 'Is water actively flowing right now?',
     inputType: 'single_choice',
     options: [
-      { value: WATER_FLOW.UNCONTROLLED, label: 'Yes, and I cannot stop it', action: { setPriority: 'P1', emergency: true, emergencyType: 'Uncontrolled Water', damageRisk: 'high' } },
-      { value: WATER_FLOW.CONTAINED, label: 'Yes, but I have contained it', action: { setPriority: 'P2', damageRisk: 'moderate' } },
-      { value: WATER_FLOW.WHEN_USED, label: 'No, it only leaks when the fixture is used', action: { setPriority: 'P3', damageRisk: 'low' } },
-      { value: WATER_FLOW.DAMAGE_ONLY, label: 'No, I only see water damage', action: { setPriority: 'P2', damageRisk: 'high' } },
-      { value: WATER_FLOW.UNSURE, label: 'I am not sure', action: { setPriority: 'P2' } },
-    ],
-    next: [
-      { when: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.UNCONTROLLED }, goto: QID.NEAR_ELECTRICAL },
-      { when: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.CONTAINED }, goto: QID.LEAK_SOURCE },
-      { when: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.WHEN_USED }, goto: QID.FIXTURE },
-      { when: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.DAMAGE_ONLY }, goto: QID.DAMAGE_LOCATION },
-      { when: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.UNSURE }, goto: QID.UNSURE_DESC },
+      { value: WATER_FLOW.UNCONTROLLED, label: 'Yes, and I cannot stop it', goto: QID.NEAR_ELECTRICAL, action: { setPriority: 'P1', emergency: true, emergencyType: 'Uncontrolled Water', damageRisk: 'high' } },
+      { value: WATER_FLOW.CONTAINED, label: 'Yes, but I have contained it', goto: QID.LEAK_SOURCE, action: { setPriority: 'P2', damageRisk: 'moderate' } },
+      { value: WATER_FLOW.WHEN_USED, label: 'No, it only leaks when the fixture is used', goto: QID.FIXTURE, action: { setPriority: 'P3', damageRisk: 'low' } },
+      { value: WATER_FLOW.DAMAGE_ONLY, label: 'No, I only see water damage', goto: QID.DAMAGE_LOCATION, action: { setPriority: 'P2', damageRisk: 'high' } },
+      { value: WATER_FLOW.UNSURE, label: 'I am not sure', goto: QID.UNSURE_DESC, action: { setPriority: 'P2' } },
     ],
   },
 
@@ -278,6 +221,8 @@ const questions: Question[] = [
   },
 
   // ── Branch 4 — visible water damage only (P2, hidden source) ───────────────
+  // Also the landing spot for wall/ceiling water damage reported via
+  // walls-ceilings-v1.ts.
   {
     id: QID.DAMAGE_LOCATION,
     section: 'issue',
@@ -339,113 +284,4 @@ const questions: Question[] = [
     ],
     next: [{ goto: QID.MEDIA }],
   },
-
-  // ── Fallback — non-plumbing / non-leak plumbing ────────────────────────────
-  {
-    id: QID.FALLBACK_DESC,
-    section: 'issue',
-    text: 'Please describe the issue.',
-    helpText:
-      'This issue type is not available in the guided intake yet. Tell us what is happening and we will ' +
-      'still create a maintenance request.',
-    inputType: 'long_text',
-    validation: { minLength: 5, maxLength: 2000, message: 'Please add a little more detail.' },
-    // → q_media (array order)
-  },
-
-  // ── Shared tail — media ────────────────────────────────────────────────────
-  {
-    id: QID.MEDIA,
-    section: 'media',
-    text: 'Add photos of the issue',
-    helpText:
-      'Photos help us send the right person with the right parts. For an appliance, a photo of the ' +
-      'model/serial label helps too. Add at least one, or mark that it is not safe to take a photo.',
-    inputType: 'photo',
-    media: { required: true, minCount: 1, allowUnsafeSkip: true },
-    // → q_name (array order)
-  },
-
-  // ── Shared tail — contact ──────────────────────────────────────────────────
-  { id: QID.NAME, section: 'contact', text: 'What is your full name?', inputType: 'short_text' },
-  { id: QID.PHONE, section: 'contact', text: 'What is the best phone number to reach you?', inputType: 'phone' },
-  { id: QID.EMAIL, section: 'contact', text: 'What is your email address?', inputType: 'email' },
-  {
-    id: QID.PREF_CONTACT,
-    section: 'contact',
-    text: 'How would you prefer we contact you?',
-    inputType: 'single_choice',
-    options: [opt('text', 'Text'), opt('phone', 'Phone'), opt('email', 'Email')],
-  },
-
-  // ── Shared tail — property ─────────────────────────────────────────────────
-  { id: QID.PROPERTY_ADDRESS, section: 'property', text: 'What is the property address? (no unit number)', inputType: 'address' },
-  { id: QID.UNIT, section: 'property', text: 'Unit number (if applicable)', inputType: 'short_text', optional: true },
-  { id: QID.PM_NAME, section: 'property', text: 'Client or property manager name (if known)', inputType: 'short_text', optional: true },
-  {
-    id: QID.SUBMITTER_ROLE,
-    section: 'property',
-    text: 'Are you the…',
-    inputType: 'single_choice',
-    options: [
-      opt('tenant', 'Tenant'),
-      opt('property_manager', 'Property manager'),
-      opt('property_owner', 'Property owner'),
-      opt('building_staff', 'Building staff'),
-      opt('other', 'Other'),
-    ],
-  },
-
-  // ── Shared tail — access ───────────────────────────────────────────────────
-  {
-    id: QID.SOMEONE_HOME,
-    section: 'access',
-    text: 'Is someone currently at the property?',
-    inputType: 'single_choice',
-    options: YES_NO,
-    // Only relevant for an active, uncontrolled emergency — skip otherwise.
-    visibleIf: { questionId: QID.WATER_FLOW, op: 'eq', value: WATER_FLOW.UNCONTROLLED },
-  },
-  {
-    id: QID.PERMISSION,
-    section: 'access',
-    text: 'Do we have permission to enter the unit if nobody is home?',
-    inputType: 'single_choice',
-    options: [
-      opt('yes', 'Yes'),
-      opt('no', 'No'),
-      opt('contact_first', 'Contact me first'),
-      opt('na', 'Not applicable'),
-    ],
-  },
-  { id: QID.ACCESS_INSTRUCTIONS, section: 'access', text: 'Any access instructions?', inputType: 'long_text', optional: true },
-  { id: QID.LOCKBOX, section: 'access', text: 'Lockbox or entry details (if any)', inputType: 'short_text', optional: true },
-  { id: QID.PARKING, section: 'access', text: 'Parking instructions (if any)', inputType: 'short_text', optional: true },
-  {
-    id: QID.PETS,
-    section: 'access',
-    text: 'Are there pets at the property?',
-    inputType: 'single_choice',
-    options: YES_NO,
-  },
-  {
-    id: QID.PET_DETAILS,
-    section: 'access',
-    text: 'Tell us about the pets (type, where they are kept).',
-    inputType: 'short_text',
-    optional: true,
-    visibleIf: { questionId: QID.PETS, op: 'eq', value: 'yes' },
-  },
-  { id: QID.BEST_TIMES, section: 'access', text: 'Best available times for us to attend?', inputType: 'short_text', optional: true },
-
-  // ── Shared tail — comments (last question → END) ───────────────────────────
-  { id: QID.COMMENTS, section: 'comments', text: 'Anything else you would like to add?', inputType: 'long_text', optional: true, next: [{ goto: 'END' }] },
 ]
-
-export const waterLeakWorkflowV1: WorkflowDefinition = {
-  id: 'maintenance_intake',
-  version: '1.1.0',
-  title: 'Maintenance Request',
-  entry: QID.CATEGORY,
-  questions: [...questions, ...applianceQuestions],
-}

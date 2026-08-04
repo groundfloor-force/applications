@@ -58,8 +58,18 @@ export function validateWorkflow(wf: WorkflowDefinition): string[] {
     for (const o of q.options ?? []) {
       if (o.goto && !isTarget(o.goto)) errors.push(`Option "${o.value}" of "${q.id}" points to unknown target "${o.goto}".`)
     }
-    if (q.dynamicOptions && !ids.has(q.dynamicOptions.basedOn)) {
-      errors.push(`Question "${q.id}" dynamic options reference unknown question "${q.dynamicOptions.basedOn}".`)
+    if (q.dynamicOptions) {
+      if (!ids.has(q.dynamicOptions.basedOn)) {
+        errors.push(`Question "${q.id}" dynamic options reference unknown question "${q.dynamicOptions.basedOn}".`)
+      }
+      // The engine resolves the chosen option through the dynamic map too, so
+      // these `goto`s are live routing and need the same check.
+      const sets = [...Object.values(q.dynamicOptions.map), q.dynamicOptions.default ?? []]
+      for (const set of sets) {
+        for (const o of set) {
+          if (o.goto && !isTarget(o.goto)) errors.push(`Dynamic option "${o.value}" of "${q.id}" points to unknown target "${o.goto}".`)
+        }
+      }
     }
     if (q.visibleIf) {
       const refs = new Set<string>()

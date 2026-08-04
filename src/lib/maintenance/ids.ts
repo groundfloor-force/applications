@@ -31,7 +31,10 @@ export const QID = {
   // Branch 5 — unsure
   UNSURE_DESC: 'q_unsure_desc',
 
-  // Fallback (non-plumbing / other plumbing)
+  // Shared terminus for every guided category flow — optional free text.
+  ISSUE_DETAIL: 'q_issue_detail',
+
+  // Fallback for anything the guided intake does not cover yet.
   FALLBACK_DESC: 'q_fallback_desc',
 
   // Shared — media
@@ -100,6 +103,7 @@ export const CATEGORY = {
   DOOR_LOCK: 'door_lock',
   WALLS_CEILINGS: 'walls_ceilings',
   HANDYMAN: 'handyman',
+  PESTS: 'pests',
   OTHER: 'other',
 } as const
 
@@ -107,7 +111,67 @@ export const PLUMBING_TYPE = {
   LEAK: 'leak',
   CLOG: 'clog',
   NO_WATER: 'no_water',
+  NO_HOT_WATER: 'no_hot_water',
   LOW_PRESSURE: 'low_pressure',
   BROKEN_FIXTURE: 'broken_fixture',
   OTHER: 'other',
+} as const
+
+/**
+ * Safety flags. These travel to Monday and are read by the coordinator, and
+ * several are set from more than one category module — keep the strings here so
+ * they cannot drift.
+ */
+export const FLAG = {
+  // Water / damage
+  WATER_NEAR_ELECTRICAL: 'water_near_electrical',
+  POSSIBLE_ELECTRICAL_HAZARD: 'possible_electrical_hazard',
+  CANNOT_SAFELY_INSPECT: 'cannot_safely_inspect',
+  CEILING_COLLAPSE_RISK: 'ceiling_collapse_risk',
+  CEILING_COLLAPSE: 'ceiling_collapse',
+  POSSIBLE_MOLD: 'possible_mold',
+  STRUCTURAL_CONCERN: 'structural_concern',
+  EXTERIOR_BREACH: 'exterior_breach',
+  FROZEN_PIPES: 'frozen_pipes',
+  SEWAGE_BACKUP: 'sewage_backup',
+  DRAIN_BACKUP: 'drain_backup',
+  SOLE_TOILET: 'sole_toilet',
+  WATER_HEATER: 'water_heater',
+  SUMP_PUMP: 'sump_pump',
+
+  // Heat / fuel
+  NO_HEAT_HABITABILITY: 'no_heat_habitability',
+  HEAT_VULNERABLE_OCCUPANT: 'heat_vulnerable_occupant',
+  CARBON_MONOXIDE: 'carbon_monoxide',
+  GAS_SMELL: 'gas_smell',
+  HVAC_FIRE_RISK: 'hvac_fire_risk',
+
+  // Electrical
+  ELECTRICAL_FIRE_RISK: 'electrical_fire_risk',
+  ELECTRICAL_SPARKS: 'electrical_sparks',
+  ELECTRIC_SHOCK: 'electric_shock',
+  EXPOSED_WIRING: 'exposed_wiring',
+  BREAKER_TRIPS: 'breaker_trips',
+  ALARM_INOPERATIVE: 'alarm_inoperative',
+  AREA_POWER_OUTAGE: 'area_power_outage',
+
+  // Appliance
+  APPLIANCE_FIRE_RISK: 'appliance_fire_risk',
+  APPLIANCE_SPARKS: 'appliance_sparks',
+  APPLIANCE_WATER: 'appliance_water',
+  APPLIANCE_OVERHEATING: 'appliance_overheating',
+  APPLIANCE_UNSAFE: 'appliance_unsafe',
+
+  // Security
+  UNIT_NOT_SECURE: 'unit_not_secure',
+  UNIT_SECURITY_REDUCED: 'unit_security_reduced',
+  TENANT_LOCKED_OUT: 'tenant_locked_out',
+  BREAK_IN: 'break_in',
+
+  // General
+  UNSAFE_LIVING_SPACE: 'unsafe_living_space',
+  INJURY: 'injury',
+  GENERAL_SAFETY_CONCERN: 'general_safety_concern',
+  RODENTS: 'rodents',
+  BEDBUGS: 'bedbugs',
 } as const

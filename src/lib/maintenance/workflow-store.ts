@@ -12,7 +12,7 @@
 
 import { list, put } from '@vercel/blob'
 import type { WorkflowDefinition } from './types'
-import { waterLeakWorkflowV1 } from './workflows/water-leak-v1'
+import { maintenanceIntakeWorkflow } from './workflows'
 import { validateWorkflow } from './validate-workflow'
 
 const ACTIVE_PATH = 'maintenance/workflow-active.json'
@@ -24,20 +24,20 @@ function blobEnabled(): boolean {
 
 /** The active workflow: the Blob-stored one if present, otherwise the code default. */
 export async function getActiveWorkflow(): Promise<WorkflowDefinition> {
-  if (!blobEnabled()) return waterLeakWorkflowV1
+  if (!blobEnabled()) return maintenanceIntakeWorkflow
   try {
     const { blobs } = await list({ prefix: ACTIVE_PATH, limit: 1 })
     const blob = blobs.find((b) => b.pathname === ACTIVE_PATH)
-    if (!blob) return waterLeakWorkflowV1
+    if (!blob) return maintenanceIntakeWorkflow
     const res = await fetch(blob.url, { cache: 'no-store' })
-    if (!res.ok) return waterLeakWorkflowV1
+    if (!res.ok) return maintenanceIntakeWorkflow
     const wf = (await res.json()) as WorkflowDefinition
     // Guard against a corrupt blob — fall back rather than serve a broken form.
-    if (validateWorkflow(wf).length > 0) return waterLeakWorkflowV1
+    if (validateWorkflow(wf).length > 0) return maintenanceIntakeWorkflow
     return wf
   } catch (err) {
     console.error('[workflow-store] getActiveWorkflow failed, using code default:', err)
-    return waterLeakWorkflowV1
+    return maintenanceIntakeWorkflow
   }
 }
 

@@ -14,11 +14,10 @@ import {
 import { evalPredicate } from '@/lib/maintenance/conditions'
 import type { AnswerValue, EngineState, WorkflowDefinition } from '@/lib/maintenance/types'
 import { loadState, saveState, clearState } from '@/lib/maintenance/persistence'
+import { SECTION_ORDER } from '@/lib/maintenance/sections'
 import QuestionScreen, { type SafetyNote } from './QuestionScreen'
 import ReviewScreen from './ReviewScreen'
 import WelcomeScreen from './WelcomeScreen'
-
-const SECTION_ORDER = ['issue', 'appliance', 'media', 'contact', 'property', 'access', 'comments']
 
 type Success = { requestId: string; priority: string; emergencyFlag: boolean }
 

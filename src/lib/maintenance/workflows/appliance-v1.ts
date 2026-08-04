@@ -16,8 +16,7 @@
 
 import type { AnswerOption, Question } from '../types'
 import { QID } from '../ids'
-
-const opt = (value: string, label: string, goto?: string): AnswerOption => ({ value, label, goto })
+import { opt, TRADE } from './shared'
 
 export const APPL = {
   WHICH: 'q_appl_which',
@@ -50,14 +49,6 @@ export const APPLIANCE = {
 // Shared symptom values (consistent across appliances so branch rules match).
 const SYM_LEAK = 'leaking'
 const SYM_NOISE = 'noise'
-
-const TRADE = {
-  APPLIANCE: 'Appliance technician',
-  GAS: 'Gas-qualified technician',
-  APPLIANCE_OR_ELEC: 'Appliance technician or electrician',
-  APPLIANCE_PLUMBER: 'Appliance technician (possibly plumber)',
-  VENT: 'Dryer-vent specialist',
-}
 
 // ── Per-appliance problem lists (dynamic options for q_appl_problem) ──────────
 const FRIDGE_PROBLEMS: AnswerOption[] = [

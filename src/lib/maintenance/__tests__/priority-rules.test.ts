@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { evaluateSeverity } from '../priority-rules'
 import { evalPredicate } from '../conditions'
-import { waterLeakWorkflowV1 as wf } from '../workflows/water-leak-v1'
+import { maintenanceIntakeWorkflow as wf } from '../workflows'
 import {
   QID,
   CATEGORY,
@@ -63,5 +63,27 @@ describe('priority rules', () => {
     const warning = ceilingQ.safetyMessages?.find((m) => m.when && evalPredicate(m.when, a))
     expect(warning).toBeTruthy()
     expect(warning!.text).toMatch(/sagging|damaged ceiling/i)
+  })
+
+  it('derives a base trade for every category', () => {
+    const expected: Record<string, string> = {
+      [CATEGORY.PLUMBING]: 'Plumber',
+      [CATEGORY.ELECTRICAL]: 'Electrician',
+      [CATEGORY.HVAC]: 'HVAC Technician',
+      [CATEGORY.APPLIANCE]: 'Appliance Technician',
+      [CATEGORY.DOOR_LOCK]: 'Locksmith or carpenter',
+      [CATEGORY.WALLS_CEILINGS]: 'Drywall / plaster repair',
+      [CATEGORY.PESTS]: 'Pest control',
+      [CATEGORY.HANDYMAN]: 'General Maintenance',
+      [CATEGORY.OTHER]: 'General Maintenance',
+    }
+    // Every option on q_category must be covered — a new category with no base
+    // trade would silently fall back to General Maintenance.
+    const options = wf.questions.find((q) => q.id === QID.CATEGORY)!.options ?? []
+    expect(options.map((o) => o.value).sort()).toEqual(Object.keys(expected).sort())
+
+    for (const [category, trade] of Object.entries(expected)) {
+      expect(evaluateSeverity({ [QID.CATEGORY]: category }, wf).suggestedTrade, category).toBe(trade)
+    }
   })
 })

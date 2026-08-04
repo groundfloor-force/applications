@@ -11,8 +11,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { AnswerMap, AnswerValue, Priority, WorkflowDefinition, Question, AnswerOption, DamageRisk } from './types'
-import { waterLeakWorkflowV1 } from './workflows/water-leak-v1'
-import { QID, CATEGORY } from './ids'
+import { maintenanceIntakeWorkflow } from './workflows'
+import { TRADE } from './workflows/shared'
+import { QID, CATEGORY, FLAG } from './ids'
+
+/** The trade to send when no answer option has named a more specific one. */
+const BASE_TRADE: Record<string, string> = {
+  [CATEGORY.PLUMBING]: TRADE.PLUMBER,
+  [CATEGORY.ELECTRICAL]: TRADE.ELECTRICIAN,
+  [CATEGORY.HVAC]: TRADE.HVAC,
+  [CATEGORY.APPLIANCE]: TRADE.APPLIANCE_TITLE,
+  [CATEGORY.DOOR_LOCK]: TRADE.LOCKSMITH_OR_CARPENTER,
+  [CATEGORY.WALLS_CEILINGS]: TRADE.DRYWALL,
+  [CATEGORY.PESTS]: TRADE.PEST,
+  [CATEGORY.HANDYMAN]: TRADE.GENERAL,
+  [CATEGORY.OTHER]: TRADE.GENERAL,
+}
 
 export interface Severity {
   priority: Priority
@@ -64,7 +78,7 @@ function findOption(q: Question, value: string): AnswerOption | undefined {
  */
 export function evaluateSeverity(
   answers: AnswerMap,
-  workflow: WorkflowDefinition = waterLeakWorkflowV1,
+  workflow: WorkflowDefinition = maintenanceIntakeWorkflow,
 ): Severity {
   let priority: Priority = 'P3'
   let emergencyFlag = false
@@ -95,13 +109,12 @@ export function evaluateSeverity(
   }
 
   // Suggested trade — an explicit option action wins; else derived from category.
+  // Order matters: `tradeFromAction` is applied LAST, so an option that names a
+  // trade suppresses the water_near_electrical override. Options that want
+  // "Plumber + Electrician" must deliberately set no `suggestedTrade`.
   const category = str(answers[QID.CATEGORY])
-  let suggestedTrade = 'General Maintenance'
-  if (category === CATEGORY.PLUMBING) suggestedTrade = 'Plumber'
-  else if (category === CATEGORY.ELECTRICAL) suggestedTrade = 'Electrician'
-  else if (category === CATEGORY.HVAC) suggestedTrade = 'HVAC Technician'
-  else if (category === CATEGORY.APPLIANCE) suggestedTrade = 'Appliance Technician'
-  if (safetyFlags.has('water_near_electrical')) suggestedTrade = 'Plumber + Electrician'
+  let suggestedTrade = BASE_TRADE[category] ?? TRADE.GENERAL
+  if (safetyFlags.has(FLAG.WATER_NEAR_ELECTRICAL)) suggestedTrade = 'Plumber + Electrician'
   if (tradeFromAction) suggestedTrade = tradeFromAction
 
   return {

@@ -9,8 +9,10 @@ import {
   deserialize,
 } from '../engine'
 import { buildRequestPayload } from '../request'
-import { waterLeakWorkflowV1 as wf } from '../workflows/water-leak-v1'
+import { maintenanceIntakeWorkflow as wf } from '../workflows'
 import { QID, CATEGORY, PLUMBING_TYPE, WATER_FLOW } from '../ids'
+import { PLMB } from '../workflows/plumbing-v1'
+import { ELEC } from '../workflows/electrical-v1'
 import { drive, step } from './helpers'
 
 describe('question engine navigation', () => {
@@ -23,9 +25,10 @@ describe('question engine navigation', () => {
     s = goBack(wf, s) // back to plumbing_type
     expect(s.currentQuestionId).toBe(QID.PLUMBING_TYPE)
 
-    // Change plumbing_type to a non-leak option → routes to the fallback flow.
+    // Change plumbing_type to another option → routes into that guided flow and
+    // the abandoned leak branch is pruned.
     s = step(wf, s, PLUMBING_TYPE.CLOG)
-    expect(s.currentQuestionId).toBe(QID.FALLBACK_DESC)
+    expect(s.currentQuestionId).toBe(PLMB.CLOG_WHAT)
     expect(s.answers[QID.WATER_FLOW]).toBeUndefined()
   })
 
@@ -65,18 +68,31 @@ describe('question engine navigation', () => {
     expect(done.answers[QID.PLUMBING_TYPE]).toBe(PLUMBING_TYPE.LEAK)
   })
 
-  it('12. a basic non-plumbing request can still be submitted', () => {
+  it('12. an uncategorised request still routes through the free-text fallback', () => {
     const done = drive(wf, {
-      [QID.CATEGORY]: CATEGORY.ELECTRICAL,
-      [QID.FALLBACK_DESC]: 'No power in the kitchen outlets since this morning.',
+      [QID.CATEGORY]: CATEGORY.OTHER,
+      [QID.FALLBACK_DESC]: 'The intercom buzzer downstairs has stopped working.',
     })
     expect(done.completed).toBe(true)
 
     const payload = buildRequestPayload(wf, done)
-    expect(payload.category).toBe('Electrical')
+    expect(payload.category).toBe('Other')
     expect(payload.qaHistory.length).toBeGreaterThan(0)
-    expect(payload.description).toContain('No power')
-    // Non-emergency electrical routes to the standard queue.
+    expect(payload.description).toContain('intercom buzzer')
+    expect(payload.priority).toBe('P3')
+    expect(payload.suggestedTrade).toBe('General Maintenance')
+  })
+
+  it('12b. electrical is now guided rather than free text', () => {
+    const done = drive(wf, {
+      [QID.CATEGORY]: CATEGORY.ELECTRICAL,
+      [ELEC.PROBLEM]: 'outlet_switch',
+    })
+    expect(done.completed).toBe(true)
+    expect(done.path).not.toContain(QID.FALLBACK_DESC)
+
+    const payload = buildRequestPayload(wf, done)
+    expect(payload.category).toBe('Electrical')
     expect(payload.priority).toBe('P3')
     expect(payload.suggestedTrade).toBe('Electrician')
   })

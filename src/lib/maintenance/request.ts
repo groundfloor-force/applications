@@ -9,8 +9,10 @@
 import type { WorkflowDefinition, EngineState, AnswerValue, QAHistoryEntry, Priority } from './types'
 import { buildHistory } from './engine'
 import { evaluateSeverity, type Severity } from './priority-rules'
-import { QID, CATEGORY, PLUMBING_TYPE, WATER_FLOW } from './ids'
+import { QID, CATEGORY, WATER_FLOW, FLAG } from './ids'
 import { APPL } from './workflows/appliance-v1'
+import { WALL } from './workflows/walls-ceilings-v1'
+import { CATEGORY_PRIMARY_QUESTIONS } from './workflows'
 
 export interface MaintenanceRequestPayload {
   // Filled by the server at submission:
@@ -76,6 +78,14 @@ function asString(v: AnswerValue): string {
   return String(v)
 }
 
+/** The answered primary-question labels for a category, in declared order. */
+function answeredPrimaryLabels(state: EngineState, category: string): string[] {
+  return (CATEGORY_PRIMARY_QUESTIONS[category] ?? [])
+    .filter((id) => state.answers[id])
+    .map((id) => label(state, id))
+    .filter(Boolean)
+}
+
 /** Deterministic natural-language summary for coordinators. */
 export function buildSummary(state: EngineState, severity: Severity): string {
   const a = state.answers
@@ -83,7 +93,10 @@ export function buildSummary(state: EngineState, severity: Severity): string {
   const category = asString(a[QID.CATEGORY])
   const parts: string[] = []
 
-  if (category === CATEGORY.PLUMBING && asString(a[QID.PLUMBING_TYPE]) === PLUMBING_TYPE.LEAK) {
+  // Gated on the leak answers rather than the category, so the two paths that
+  // jump into the leak tree from elsewhere (broken fixture → q_water_flow,
+  // wall/ceiling water damage → q_damage_location) get the same good prose.
+  if (a[QID.WATER_FLOW] || a[QID.DAMAGE_LOCATION]) {
     const flow = asString(a[QID.WATER_FLOW])
     const source = label(state, QID.LEAK_SOURCE) || label(state, QID.FIXTURE)
     const where = source ? ` ${source.toLowerCase()}` : ''
@@ -97,19 +110,21 @@ export function buildSummary(state: EngineState, severity: Severity): string {
     } else if (flow === WATER_FLOW.WHEN_USED) {
       const amount = label(state, QID.LEAK_AMOUNT)
       parts.push(`${role} reports a leak from the${where || ' fixture'} that appears only when used${amount ? ` (${amount.toLowerCase()})` : ''}.`)
-    } else if (flow === WATER_FLOW.DAMAGE_ONLY) {
+    } else if (flow === WATER_FLOW.DAMAGE_ONLY || (!flow && a[QID.DAMAGE_LOCATION])) {
+      // `!flow` = arrived here from the walls & ceilings flow.
       const dmg = label(state, QID.DAMAGE_LOCATION)
-      parts.push(`${role} reports water damage${dmg ? ` at the ${dmg.toLowerCase()}` : ''} with no visible active leak — source may be hidden.`)
+      const what = !flow ? label(state, WALL.WHAT) : ''
+      parts.push(`${role} reports ${what ? `${what.toLowerCase()} — ` : ''}water damage${dmg ? ` at the ${dmg.toLowerCase()}` : ''} with no visible active leak — source may be hidden.`)
     } else {
       parts.push(`${role} reports a possible leak but is unsure of the details.`)
     }
 
-    if (severity.safetyFlags.includes('water_near_electrical')) {
+    if (severity.safetyFlags.includes(FLAG.WATER_NEAR_ELECTRICAL)) {
       parts.push('Water is near electrical equipment.')
     } else if (a[QID.NEAR_ELECTRICAL] === 'no') {
       parts.push('No water is near electrical equipment.')
     }
-    if (severity.safetyFlags.includes('ceiling_collapse_risk')) {
+    if (severity.safetyFlags.includes(FLAG.CEILING_COLLAPSE_RISK)) {
       parts.push('Ceiling may be at risk of falling.')
     }
   } else if (category === CATEGORY.APPLIANCE) {
@@ -118,9 +133,20 @@ export function buildSummary(state: EngineState, severity: Severity): string {
     parts.push(`${role} reports an issue with the ${appliance}${problem ? `: ${problem.toLowerCase()}` : ''}.`)
     const detail = asString(a[APPL.SYMPTOM_DETAIL])
     if (detail) parts.push(detail)
+  } else if (answeredPrimaryLabels(state, category).length > 0) {
+    // Every other guided category: read the answers back in the order the
+    // module declares them, most-defining first.
+    const categoryLabel = (label(state, QID.CATEGORY) || 'maintenance').toLowerCase()
+    parts.push(`${role} reports a ${categoryLabel} issue: ${answeredPrimaryLabels(state, category).join(' — ')}.`)
+    const detail = asString(a[QID.ISSUE_DETAIL])
+    if (detail) parts.push(detail)
   } else {
     const desc = asString(a[QID.FALLBACK_DESC])
     parts.push(`${role} reports a ${category || 'maintenance'} issue: ${desc}`)
+  }
+
+  if (severity.emergencyFlag && severity.emergencyType) {
+    parts.push(`Flagged as an emergency: ${severity.emergencyType}.`)
   }
 
   const media = state.answers[QID.MEDIA]
@@ -135,20 +161,24 @@ export function buildSummary(state: EngineState, severity: Severity): string {
 
 function issueTypeOf(state: EngineState): string {
   const a = state.answers
-  if (asString(a[QID.CATEGORY]) === CATEGORY.PLUMBING) {
+  const category = asString(a[QID.CATEGORY])
+  if (category === CATEGORY.PLUMBING) {
     const pt = label(state, QID.PLUMBING_TYPE)
     return pt || 'Plumbing'
   }
-  if (asString(a[QID.CATEGORY]) === CATEGORY.APPLIANCE) {
+  if (category === CATEGORY.APPLIANCE) {
     return label(state, APPL.WHICH) || 'Appliance'
   }
-  return label(state, QID.CATEGORY)
+  // Prefer the specific symptom over the category label, so Monday shows
+  // "No heat at all" rather than "Heating or cooling".
+  return answeredPrimaryLabels(state, category)[0] || label(state, QID.CATEGORY)
 }
 
 function description(state: EngineState, severity: Severity): string {
   const fallback = asString(state.answers[QID.FALLBACK_DESC])
+  const detail = asString(state.answers[QID.ISSUE_DETAIL])
   const comments = asString(state.answers[QID.COMMENTS])
-  const bits = [fallback, comments].filter(Boolean)
+  const bits = [fallback, detail, comments].filter(Boolean)
   return bits.length ? bits.join('\n\n') : buildSummary(state, severity)
 }
 

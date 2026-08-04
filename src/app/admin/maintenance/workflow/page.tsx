@@ -42,6 +42,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 export default function WorkflowEditorPage() {
   const [authed, setAuthed] = useState<boolean | null>(null)
   const [wf, setWf] = useState<WorkflowDefinition | null>(null)
+  const [builtIn, setBuiltIn] = useState<WorkflowDefinition | null>(null)
   const [versions, setVersions] = useState<VersionRef[]>([])
   const [error, setError] = useState('')
 
@@ -52,6 +53,7 @@ export default function WorkflowEditorPage() {
     if (res.ok) {
       const data = await res.json()
       setWf(data.workflow)
+      setBuiltIn(data.builtIn ?? null)
       setVersions(data.versions ?? [])
     } else {
       setError((await res.json().catch(() => ({}))).error || 'Failed to load')
@@ -65,5 +67,5 @@ export default function WorkflowEditorPage() {
   if (error) return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-red-600">{error}</div>
   if (!wf) return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">Loading workflow…</div>
 
-  return <WorkflowEditor initial={wf} initialVersions={versions} />
+  return <WorkflowEditor initial={wf} initialVersions={versions} builtIn={builtIn} />
 }

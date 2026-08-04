@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getActiveWorkflow, saveActiveWorkflow, listWorkflowVersions } from '@/lib/maintenance/workflow-store'
 import { validateWorkflow } from '@/lib/maintenance/validate-workflow'
+import { maintenanceIntakeWorkflow } from '@/lib/maintenance/workflows'
 import type { WorkflowDefinition } from '@/lib/maintenance/types'
 
 async function requireAdmin(): Promise<boolean> {
@@ -15,7 +16,11 @@ export async function GET() {
   }
   try {
     const [workflow, versions] = await Promise.all([getActiveWorkflow(), listWorkflowVersions()])
-    return NextResponse.json({ workflow, versions })
+    // `builtIn` is the workflow that ships with the code. Once anything has been
+    // saved from this editor the Blob copy wins forever, so a code-side change
+    // (a new category, a reworded question) is invisible on the public form
+    // until someone loads the built-in default here and saves it.
+    return NextResponse.json({ workflow, versions, builtIn: maintenanceIntakeWorkflow })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: msg }, { status: 500 })

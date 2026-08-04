@@ -4,16 +4,7 @@ import type { EngineState, WorkflowDefinition } from '@/lib/maintenance/types'
 import { getQuestion } from '@/lib/maintenance/engine'
 import { evaluateSeverity } from '@/lib/maintenance/priority-rules'
 import { QID } from '@/lib/maintenance/ids'
-
-const SECTIONS: { key: string; title: string }[] = [
-  { key: 'issue', title: 'The issue' },
-  { key: 'appliance', title: 'Appliance details' },
-  { key: 'media', title: 'Photos' },
-  { key: 'contact', title: 'Your contact details' },
-  { key: 'property', title: 'Property' },
-  { key: 'access', title: 'Access' },
-  { key: 'comments', title: 'Additional details' },
-]
+import { SECTIONS } from '@/lib/maintenance/sections'
 
 const PRIORITY_LABEL: Record<string, string> = {
   P1: 'P1 · Emergency',
