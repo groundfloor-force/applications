@@ -49,7 +49,7 @@ export default function ReviewScreen({
 
   return (
     <div>
-      <h1 className="text-2xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
+      <h1 className="sentence-case text-2xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
         Review your request
       </h1>
       <p className="text-brand-gray text-sm mb-6">

@@ -201,7 +201,7 @@ export default function MaintenanceIntake({ workflow }: { workflow: WorkflowDefi
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-3xl text-brand-dark mb-3" style={{ fontWeight: 700 }}>
+        <h1 className="sentence-case text-3xl text-brand-dark mb-3" style={{ fontWeight: 700 }}>
           Request received
         </h1>
         {success.emergencyFlag ? (

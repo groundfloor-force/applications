@@ -10,7 +10,7 @@ const CHECKLIST: { title: string; detail: string }[] = [
 export default function WelcomeScreen({ onStart }: { onStart: () => void }) {
   return (
     <div className="max-w-xl mx-auto">
-      <h1 className="text-3xl text-brand-dark mb-3" style={{ fontWeight: 700 }}>
+      <h1 className="sentence-case text-3xl text-brand-dark mb-3" style={{ fontWeight: 700 }}>
         Report a maintenance issue
       </h1>
       <p className="text-brand-gray mb-2">

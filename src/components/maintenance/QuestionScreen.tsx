@@ -81,7 +81,7 @@ export default function QuestionScreen({
         </div>
       )}
 
-      <h2 className="text-2xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
+      <h2 className="sentence-case text-2xl text-brand-dark mb-2" style={{ fontWeight: 700 }}>
         {question.text}
       </h2>
       {question.helpText && <p className="text-brand-gray text-sm mb-5">{question.helpText}</p>}
