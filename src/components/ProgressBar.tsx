@@ -7,13 +7,15 @@ export default function ProgressBar({
   current,
   total,
   onJump,
+  labels,
 }: {
   current: number
   total: number
   onJump?: (step: number) => void
+  labels?: string[]
 }) {
   const t = useT()
-  const STEP_LABELS = [
+  const STEP_LABELS = labels ?? [
     t.progress.yourDetails,
     t.progress.household,
     t.progress.occupants,

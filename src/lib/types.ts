@@ -131,6 +131,42 @@ export interface FormData {
   signedAt: string
 }
 
+export type RoommateStayStatus = 'staying' | 'leaving' | ''
+
+export interface RoommatePerson {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  status: RoommateStayStatus
+}
+
+export interface RoommateChangeData {
+  unitId: string
+  unitName: string
+  tenants: RoommatePerson[]
+  hasIncoming: boolean | null
+  incoming: RoommatePerson[]
+  feeAgreed: boolean
+}
+
+export const emptyRoommatePerson = (): RoommatePerson => ({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  status: '',
+})
+
+export const initialRoommateChangeData = (): RoommateChangeData => ({
+  unitId: '',
+  unitName: '',
+  tenants: [emptyRoommatePerson(), emptyRoommatePerson()],
+  hasIncoming: null,
+  incoming: [emptyRoommatePerson()],
+  feeAgreed: false,
+})
+
 export interface FormConfig {
   formOpen: boolean
   companyName: string

@@ -226,3 +226,39 @@ export async function sendNotificationEmail(
     `,
   })
 }
+
+export async function sendRoommateChangeNotificationEmail(
+  notificationEmail: string,
+  propertyAddress: string,
+  mondayItemUrl: string,
+  stayingNames: string,
+  leavingNames: string,
+  incomingNames: string,
+): Promise<void> {
+  if (!notificationEmail) return
+
+  await send({
+    to: [notificationEmail],
+    subject: `Roommate Change: ${propertyAddress || 'Unknown property'}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+        <div style="background: #005EAD; padding: 24px 32px;">
+          <img src="https://www.groundfloorpm.com/images/logo-long.png" alt="Ground Floor PM" style="height: 40px;" />
+        </div>
+        <div style="padding: 32px;">
+          <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">New Roommate Change Request</h1>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+            <tr><td style="padding: 8px 0; color: #555; width: 140px;">Property</td><td style="padding: 8px 0; font-weight: 600;">${propertyAddress || '—'}</td></tr>
+            <tr><td style="padding: 8px 0; color: #555;">Staying</td><td style="padding: 8px 0;">${stayingNames || '—'}</td></tr>
+            <tr><td style="padding: 8px 0; color: #555;">Leaving</td><td style="padding: 8px 0;">${leavingNames || '—'}</td></tr>
+            <tr><td style="padding: 8px 0; color: #555;">Moving in</td><td style="padding: 8px 0;">${incomingNames || 'None'}</td></tr>
+            <tr><td style="padding: 8px 0; color: #555;">Submitted</td><td style="padding: 8px 0;">${new Date().toLocaleString('en-CA', { timeZone: 'America/Moncton' })}</td></tr>
+          </table>
+          <a href="${mondayItemUrl}" style="display: inline-block; background: #005EAD; color: white; padding: 12px 28px; border-radius: 25px; text-decoration: none; font-weight: 600;">
+            View in Monday.com →
+          </a>
+        </div>
+      </div>
+    `,
+  })
+}

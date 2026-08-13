@@ -1,6 +1,12 @@
-import type { Property, FormData } from './types'
+import type { Property, FormData, RoommateChangeData } from './types'
 import type { MaintenanceRequestPayload } from './maintenance/request'
-import { buildNoticeColumnValues, noticeItemName, type NoticeFormData } from './notices'
+import { buildNoticeColumnValues, noticeItemName, parseUnitName, type NoticeFormData } from './notices'
+import {
+  buildRoommateChangeHtml,
+  roommateItemName,
+  ROOMMATE_STATUS_LABEL,
+  staying,
+} from './roommate-change'
 
 // Monday's phone column rejects formatted numbers (spaces, dashes, parens).
 // Reduce to digits only, dropping a North-American leading "1".
@@ -14,6 +20,8 @@ const MONDAY_API_URL = 'https://api.monday.com/v2'
 const APPLICATIONS_BOARD_ID = 640654033
 const VACANCY_BOARD_ID = 469686343
 const NEW_GROUP_ID = 'new_group44751'
+
+export const APPLICATIONS_BOARD_URL_PREFIX = `https://groundfloor-force.monday.com/boards/${APPLICATIONS_BOARD_ID}/pulses/`
 
 function getToken() {
   const token = process.env.MONDAY_API_TOKEN
@@ -367,6 +375,50 @@ export async function createApplication(
   return result.create_item.id
 }
 
+export async function createRoommateChange(
+  data: RoommateChangeData,
+  locale?: 'en' | 'fr',
+): Promise<string> {
+  const { address, unit } = parseUnitName(data.unitName)
+  const contact = staying(data)[0]
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cv: Record<string, any> = {
+    status1: { label: ROOMMATE_STATUS_LABEL },
+    rental_address: address,
+    unit__: unit,
+    date: { date: new Date().toISOString().split('T')[0] },
+    ...(locale && { dropdown_mm3bp54f: { labels: [locale] } }),
+  }
+
+  if (contact?.email) {
+    cv.email = { email: contact.email, text: contact.email }
+  }
+  if (contact?.phone) {
+    cv.phone6 = sanitizePhone(contact.phone)
+  }
+
+  const mutation = `
+    mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
+      create_item(
+        board_id: $boardId
+        group_id: $groupId
+        item_name: $itemName
+        column_values: $columnValues
+      ) { id }
+    }
+  `
+
+  const result = await mondayQuery<{ create_item: { id: string } }>(mutation, {
+    boardId: String(APPLICATIONS_BOARD_ID),
+    groupId: NEW_GROUP_ID,
+    itemName: roommateItemName(data),
+    columnValues: JSON.stringify(cv),
+  })
+
+  return result.create_item.id
+}
+
 export async function createApplicationUpdate(
   itemId: string,
   data: Omit<FormData, 'documents' | 'occupantDocs'>,
@@ -507,6 +559,13 @@ export async function postPlainUpdate(itemId: string, bodyHtml: string): Promise
     }
   `
   await mondayQuery(mutation, { itemId, body: bodyHtml })
+}
+
+export async function createRoommateChangeUpdate(
+  itemId: string,
+  data: RoommateChangeData,
+): Promise<void> {
+  await postPlainUpdate(itemId, buildRoommateChangeHtml(data))
 }
 
 // Post a co-signer addendum update note to an existing application item.

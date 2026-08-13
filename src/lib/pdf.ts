@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
-import type { FormData } from './types'
+import type { FormData, RoommateChangeData } from './types'
+import { incomingPeople, leaving, personName, ROOMMATE_FEE_AMOUNT, ROOMMATE_FEE_EMAIL, staying } from './roommate-change'
 
 export function generateApplicationPdf(data: Omit<FormData, 'documents' | 'occupantDocs'>): Buffer {
   const doc = new jsPDF({ unit: 'mm', format: 'letter', compress: true })
@@ -518,4 +519,109 @@ export function generateBlankApplicationPdf(): Buffer {
 
   const arrayBuf = doc.output('arraybuffer')
   return Buffer.from(arrayBuf)
+}
+
+export function generateRoommateChangePdf(data: RoommateChangeData): Buffer {
+  const doc = new jsPDF({ unit: 'mm', format: 'letter', compress: true })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 20
+  const contentWidth = pageWidth - margin * 2
+  let y = 20
+
+  function checkPage(needed = 12) {
+    if (y + needed > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage()
+      y = 20
+    }
+  }
+
+  function heading(text: string) {
+    checkPage(16)
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(0, 90, 163)
+    doc.text(text, margin, y)
+    y += 2
+    doc.setDrawColor(0, 90, 163)
+    doc.setLineWidth(0.5)
+    doc.line(margin, y, margin + contentWidth, y)
+    y += 8
+  }
+
+  function label(lbl: string, val: string) {
+    doc.setFontSize(9)
+    const valueWidth = contentWidth - 55
+    const lines: string[] = doc.splitTextToSize(val || '—', valueWidth)
+    checkPage(lines.length * 5 + 1)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(100, 112, 141)
+    doc.text(lbl, margin, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(17, 17, 17)
+    doc.text(lines, margin + 55, y)
+    y += Math.max(1, lines.length) * 5 + 1
+  }
+
+  const stay = staying(data)
+  const leave = leaving(data)
+  const incoming = incomingPeople(data)
+
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(0, 90, 163)
+  doc.text('Roommate Change Request', margin, y)
+  y += 6
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(100, 112, 141)
+  doc.text(
+    `Ground Floor Property Management — Submitted ${new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+    margin,
+    y,
+  )
+  y += 12
+
+  heading('Property')
+  label('Address', data.unitName)
+
+  heading('Staying')
+  if (stay.length === 0) {
+    label('Tenants', 'None')
+  } else {
+    stay.forEach((p) => {
+      label('Name', personName(p))
+      label('Email', p.email)
+      label('Phone', p.phone)
+    })
+  }
+
+  heading('Leaving')
+  if (leave.length === 0) {
+    label('Tenants', 'None')
+  } else {
+    leave.forEach((p) => {
+      label('Name', personName(p))
+      label('Email', p.email)
+      label('Phone', p.phone)
+    })
+  }
+
+  heading('Moving in')
+  if (incoming.length === 0) {
+    label('Tenants', 'None')
+  } else {
+    incoming.forEach((p) => {
+      label('Name', personName(p))
+      label('Email', p.email)
+      label('Phone', p.phone)
+    })
+  }
+
+  heading('Fee')
+  label('Amount', `$${ROOMMATE_FEE_AMOUNT}`)
+  label('Payment', `E-transfer to ${ROOMMATE_FEE_EMAIL}`)
+  label('Agreed', data.feeAgreed ? 'Yes' : 'No')
+
+  const out = doc.output('arraybuffer')
+  return Buffer.from(out)
 }
