@@ -147,7 +147,11 @@ export interface RoommateChangeData {
   tenants: RoommatePerson[]
   hasIncoming: boolean | null
   incoming: RoommatePerson[]
+  effectiveDate: string
+  noticeAcknowledged: boolean
   feeAgreed: boolean
+  signatureData: string
+  signedAt: string
 }
 
 export const emptyRoommatePerson = (): RoommatePerson => ({
@@ -164,7 +168,11 @@ export const initialRoommateChangeData = (): RoommateChangeData => ({
   tenants: [emptyRoommatePerson(), emptyRoommatePerson()],
   hasIncoming: null,
   incoming: [emptyRoommatePerson()],
+  effectiveDate: '',
+  noticeAcknowledged: false,
   feeAgreed: false,
+  signatureData: '',
+  signedAt: '',
 })
 
 export interface FormConfig {

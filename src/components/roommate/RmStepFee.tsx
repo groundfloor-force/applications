@@ -27,7 +27,7 @@ export default function RmStepFee({
         </p>
         <p className="text-sm text-brand-dark">
           {t.rm.feePayTo}{' '}
-          <a href="mailto:deposit@groundfloorpm.com" className="text-primary-500 hover:underline" style={{ fontWeight: 600 }}>
+          <a href={`mailto:${t.rm.feeEmail}`} className="text-primary-500 hover:underline" style={{ fontWeight: 600 }}>
             {t.rm.feeEmail}
           </a>
         </p>

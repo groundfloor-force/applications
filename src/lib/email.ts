@@ -234,6 +234,7 @@ export async function sendRoommateChangeNotificationEmail(
   stayingNames: string,
   leavingNames: string,
   incomingNames: string,
+  effectiveDate?: string,
 ): Promise<void> {
   if (!notificationEmail) return
 
@@ -249,6 +250,7 @@ export async function sendRoommateChangeNotificationEmail(
           <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">New Roommate Change Request</h1>
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
             <tr><td style="padding: 8px 0; color: #555; width: 140px;">Property</td><td style="padding: 8px 0; font-weight: 600;">${propertyAddress || '—'}</td></tr>
+            <tr><td style="padding: 8px 0; color: #555;">Effective</td><td style="padding: 8px 0;">${effectiveDate || '—'}</td></tr>
             <tr><td style="padding: 8px 0; color: #555;">Staying</td><td style="padding: 8px 0;">${stayingNames || '—'}</td></tr>
             <tr><td style="padding: 8px 0; color: #555;">Leaving</td><td style="padding: 8px 0;">${leavingNames || '—'}</td></tr>
             <tr><td style="padding: 8px 0; color: #555;">Moving in</td><td style="padding: 8px 0;">${incomingNames || 'None'}</td></tr>

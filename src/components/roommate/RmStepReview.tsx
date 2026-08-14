@@ -1,5 +1,6 @@
 'use client'
 
+import SignaturePad from '@/components/SignaturePad'
 import { useT } from '@/lib/locale-context'
 import { incomingPeople, leaving, personName, staying } from '@/lib/roommate-change'
 import type { RoommateChangeData, RoommatePerson } from '@/lib/types'
@@ -21,17 +22,21 @@ function Line({ people }: { people: RoommatePerson[] }) {
 export default function RmStepReview({
   data,
   submitting,
-  error,
+  errors,
   onJump,
+  onChange,
   onSubmit,
 }: {
   data: RoommateChangeData
   submitting: boolean
-  error?: string
+  errors: Record<string, string>
   onJump: (step: number) => void
+  onChange: (u: Partial<RoommateChangeData>) => void
   onSubmit: () => void
 }) {
   const t = useT()
+  const signer = staying(data)[0]
+  const signedAs = signer ? personName(signer) : ''
 
   return (
     <div>
@@ -40,9 +45,9 @@ export default function RmStepReview({
       </h2>
       <p className="text-sm text-brand-gray mb-6">{t.rm.step7Subtitle}</p>
 
-      {error && (
+      {errors.submit && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 text-secondary text-sm">
-          {error}
+          {errors.submit}
         </div>
       )}
 
@@ -55,6 +60,17 @@ export default function RmStepReview({
             <p className="text-sm text-brand-dark" style={{ fontWeight: 600 }}>{data.unitName}</p>
           </div>
           <button type="button" onClick={() => onJump(1)} className="text-xs text-primary-500 hover:underline flex-shrink-0">
+            {t.rm.editSection}
+          </button>
+        </div>
+        <div className="px-4 sm:px-5 py-4 flex justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-brand-gray mb-1" style={{ fontWeight: 700 }}>
+              {t.rm.reviewEffectiveDate}
+            </p>
+            <p className="text-sm text-brand-dark" style={{ fontWeight: 600 }}>{data.effectiveDate || '—'}</p>
+          </div>
+          <button type="button" onClick={() => onJump(3)} className="text-xs text-primary-500 hover:underline flex-shrink-0">
             {t.rm.editSection}
           </button>
         </div>
@@ -119,10 +135,31 @@ export default function RmStepReview({
         </ol>
       </div>
 
+      <div className="form-section mb-8">
+        <h3 className="section-title">{t.rm.signatureTitle}</h3>
+        <p className="text-sm text-brand-gray mb-3">{t.rm.signatureIntro}</p>
+        <SignaturePad
+          value={data.signatureData}
+          onChange={(dataUrl) => onChange({
+            signatureData: dataUrl,
+            signedAt: dataUrl ? new Date().toISOString() : '',
+          })}
+          clearLabel={t.rm.signatureClear}
+        />
+        {signedAs && (
+          <p className="text-xs text-brand-gray mt-2">
+            {t.rm.signatureSignedAs}: <span className="text-brand-dark" style={{ fontWeight: 600 }}>{signedAs}</span>
+          </p>
+        )}
+        {errors.signatureData && (
+          <p className="text-xs text-secondary mt-2">{errors.signatureData}</p>
+        )}
+      </div>
+
       <button
         type="button"
         onClick={onSubmit}
-        disabled={submitting}
+        disabled={submitting || !data.signatureData}
         className="btn-primary w-full sm:w-auto"
       >
         {submitting ? t.rm.submitting : t.rm.submit}

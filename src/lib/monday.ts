@@ -1,8 +1,10 @@
 import type { Property, FormData, RoommateChangeData } from './types'
 import type { MaintenanceRequestPayload } from './maintenance/request'
-import { buildNoticeColumnValues, noticeItemName, parseUnitName, type NoticeFormData } from './notices'
+import { buildNoticeColumnValues, buildRoommateNoticeColumnValues, noticeItemName, parseUnitName, roommateNoticeItemName, type NoticeFormData } from './notices'
 import {
   buildRoommateChangeHtml,
+  leaving,
+  personName,
   roommateItemName,
   ROOMMATE_STATUS_LABEL,
   staying,
@@ -1081,4 +1083,43 @@ export async function createNoticeItem(data: NoticeFormData): Promise<string> {
   })
 
   return result.create_item.id
+}
+
+export async function createRoommateNoticeItems(data: RoommateChangeData): Promise<string[]> {
+  const leavers = leaving(data)
+  const stayNames = staying(data).map(personName).filter(Boolean).join(', ')
+  const leaveNames = leavers.map(personName).filter(Boolean).join(', ')
+  const ids: string[] = []
+
+  const mutation = `
+    mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
+      create_item(
+        board_id: $boardId
+        group_id: $groupId
+        item_name: $itemName
+        column_values: $columnValues
+      ) { id }
+    }
+  `
+
+  for (const person of leavers) {
+    const result = await mondayQuery<{ create_item: { id: string } }>(mutation, {
+      boardId: String(NOTICES_BOARD_ID),
+      groupId: NOTICES_GROUP_UNPROCESSED,
+      itemName: roommateNoticeItemName(data.unitName),
+      columnValues: JSON.stringify(buildRoommateNoticeColumnValues({
+        unitId: data.unitId,
+        unitName: data.unitName,
+        moveOutDate: data.effectiveDate,
+        fullName: personName(person),
+        email: person.email,
+        phone: person.phone,
+        stayingNames: stayNames,
+        leavingNames: leaveNames,
+      })),
+    })
+    ids.push(result.create_item.id)
+  }
+
+  return ids
 }

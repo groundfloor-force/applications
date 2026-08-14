@@ -45,6 +45,14 @@ function Recap({ summary }: { summary: RoommateChangeSummary }) {
         </h3>
         <p className="text-sm text-brand-dark" style={{ fontWeight: 600 }}>{summary.unitName}</p>
       </div>
+      {summary.effectiveDate && (
+        <div className="px-4 sm:px-6 py-4">
+          <h3 className="text-xs uppercase tracking-widest text-brand-gray mb-1" style={{ fontWeight: 700 }}>
+            {t.rm.reviewEffectiveDate}
+          </h3>
+          <p className="text-sm text-brand-dark" style={{ fontWeight: 600 }}>{summary.effectiveDate}</p>
+        </div>
+      )}
       <Section title={t.rm.confirmStaying} people={summary.staying} />
       <Section title={t.rm.confirmLeaving} people={summary.leaving} />
       <Section title={t.rm.confirmIncoming} people={summary.incoming} empty={summary.incoming.length === 0} />
@@ -110,8 +118,8 @@ function SuccessBody({
         <div className="bg-amber-50 border border-amber-200 px-4 sm:px-6 py-5 mb-6">
           <p className="text-sm text-amber-900">
             {t.rm.successFeeReminder}{' '}
-            <a href="mailto:deposit@groundfloorpm.com" className="font-semibold hover:underline">
-              deposit@groundfloorpm.com
+            <a href={`mailto:${t.rm.feeEmail}`} className="font-semibold hover:underline">
+              {t.rm.feeEmail}
             </a>
           </p>
         </div>

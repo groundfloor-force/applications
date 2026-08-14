@@ -5,10 +5,11 @@ import { emptyRoommatePerson, initialRoommateChangeData } from './types'
 export const ROOMMATE_STORAGE_KEY = 'gfpm_roommate_change_v1'
 export const ROOMMATE_SUCCESS_KEY = 'gfpm_roommate_change_success'
 export const ROOMMATE_FEE_AMOUNT = 100
-export const ROOMMATE_FEE_EMAIL = 'deposit@groundfloorpm.com'
+export const ROOMMATE_FEE_EMAIL = 'rent@groundfloorpm.com'
 export const ROOMMATE_STATUS_LABEL = 'Roommate Exchange'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export interface RoommateValidationMessages {
   addressRequired: string
@@ -24,6 +25,10 @@ export interface RoommateValidationMessages {
   incomingQuestion: string
   incomingMin: string
   feeRequired: string
+  effectiveDateRequired: string
+  effectiveDateInvalid: string
+  noticeAckRequired: string
+  signatureRequired: string
 }
 
 export const DEFAULT_RM_VALIDATION: RoommateValidationMessages = {
@@ -40,6 +45,10 @@ export const DEFAULT_RM_VALIDATION: RoommateValidationMessages = {
   incomingQuestion: 'Please tell us if anyone new is moving in.',
   incomingMin: 'Add at least one person moving in, or choose No.',
   feeRequired: 'You must agree to the $100 fee to continue.',
+  effectiveDateRequired: 'Enter the date this change should take effect.',
+  effectiveDateInvalid: 'Enter a valid date (YYYY-MM-DD).',
+  noticeAckRequired: 'Please acknowledge that this is notice to vacate, not an approval.',
+  signatureRequired: 'Your signature is required to submit.',
 }
 
 export { emptyRoommatePerson, initialRoommateChangeData }
@@ -107,6 +116,11 @@ export function validateRoommateStep(
     })
     if (staying(data).length === 0) e.needStaying = v.needStaying
     if (leaving(data).length === 0) e.needLeaving = v.needLeaving
+    if (!data.effectiveDate) e.effectiveDate = v.effectiveDateRequired
+    else if (!ISO_DATE_RE.test(data.effectiveDate) || isNaN(Date.parse(data.effectiveDate))) {
+      e.effectiveDate = v.effectiveDateInvalid
+    }
+    if (!data.noticeAcknowledged) e.noticeAcknowledged = v.noticeAckRequired
   }
 
   if (step >= 4) {
@@ -119,6 +133,10 @@ export function validateRoommateStep(
 
   if (step >= 6) {
     if (!data.feeAgreed) e.feeAgreed = v.feeRequired
+  }
+
+  if (step >= 7) {
+    if (!data.signatureData.startsWith('data:image/')) e.signatureData = v.signatureRequired
   }
 
   return e
@@ -153,6 +171,7 @@ export function buildRoommateChangeHtml(data: RoommateChangeData): string {
   const lines = [
     '<h2>Roommate Change Request</h2>',
     `<b>Property:</b> ${escapeHtml(data.unitName)}`,
+    `<b>Effective date:</b> ${escapeHtml(data.effectiveDate || '—')}`,
     '',
     '<b>Staying</b>',
     ...stay.map((p) => `· ${personLine(p)}`),
@@ -166,6 +185,8 @@ export function buildRoommateChangeHtml(data: RoommateChangeData): string {
       : incoming.map((p) => `· ${personLine(p)}`),
     '',
     `<b>Fee:</b> Agreed — $${ROOMMATE_FEE_AMOUNT} e-transfer to ${ROOMMATE_FEE_EMAIL}`,
+    `<b>Notice to vacate acknowledged:</b> ${data.noticeAcknowledged ? 'Yes' : 'No'}`,
+    data.signedAt ? `<b>Signed:</b> ${escapeHtml(data.signedAt)}` : '',
     `<i>Submitted ${new Date().toLocaleString('en-CA', { timeZone: 'America/Moncton' })}</i>`,
   ]
   return lines.flat().join('\n')
@@ -173,6 +194,7 @@ export function buildRoommateChangeHtml(data: RoommateChangeData): string {
 
 export interface RoommateChangeSummary {
   unitName: string
+  effectiveDate: string
   staying: { name: string; email: string; phone: string }[]
   leaving: { name: string; email: string; phone: string }[]
   incoming: { name: string; email: string; phone: string }[]
@@ -185,6 +207,7 @@ function toSummaryPerson(p: RoommatePerson) {
 export function buildRoommateChangeSummary(data: RoommateChangeData): RoommateChangeSummary {
   return {
     unitName: data.unitName,
+    effectiveDate: data.effectiveDate,
     staying: staying(data).map(toSummaryPerson),
     leaving: leaving(data).map(toSummaryPerson),
     incoming: incomingPeople(data).map(toSummaryPerson),
@@ -215,7 +238,11 @@ export function loadRoommateForm(): SavedRoommateForm | null {
   try {
     const raw = localStorage.getItem(ROOMMATE_STORAGE_KEY)
     if (!raw) return null
-    return JSON.parse(raw) as SavedRoommateForm
+    const parsed = JSON.parse(raw) as SavedRoommateForm
+    return {
+      ...parsed,
+      data: { ...initialRoommateChangeData(), ...parsed.data },
+    }
   } catch {
     return null
   }

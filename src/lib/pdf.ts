@@ -583,6 +583,7 @@ export function generateRoommateChangePdf(data: RoommateChangeData): Buffer {
 
   heading('Property')
   label('Address', data.unitName)
+  label('Effective date', data.effectiveDate)
 
   heading('Staying')
   if (stay.length === 0) {
@@ -621,6 +622,30 @@ export function generateRoommateChangePdf(data: RoommateChangeData): Buffer {
   label('Amount', `$${ROOMMATE_FEE_AMOUNT}`)
   label('Payment', `E-transfer to ${ROOMMATE_FEE_EMAIL}`)
   label('Agreed', data.feeAgreed ? 'Yes' : 'No')
+  label('Notice acknowledged', data.noticeAcknowledged ? 'Yes' : 'No')
+
+  if (data.signatureData) {
+    checkPage(60)
+    heading('Signature')
+    try {
+      const sigW = 80
+      const sigH = 30
+      doc.addImage(data.signatureData, 'PNG', margin, y, sigW, sigH, undefined, 'FAST')
+      y += sigH + 4
+    } catch {
+      // ignore image failures so PDF still generates
+    }
+    const signer = stay[0]
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60, 60, 60)
+    doc.text(
+      `Signed by ${signer ? personName(signer) : 'tenant'}${data.signedAt ? ` on ${data.signedAt}` : ''}`.trim(),
+      margin,
+      y,
+    )
+    y += 8
+  }
 
   const out = doc.output('arraybuffer')
   return Buffer.from(out)

@@ -3,9 +3,12 @@ import {
   validateNotice,
   parseUnitName,
   buildNoticeColumnValues,
+  buildRoommateNoticeColumnValues,
   noticeItemName,
+  roommateNoticeItemName,
   NOTICE_REASON_OTHER,
   NOTICES_FORWARDING_ADDRESS_COLUMN_ID,
+  NOTICES_TYPE_ROOMMATE_CHANGE,
   type NoticeFormData,
 } from '../notices'
 
@@ -108,5 +111,35 @@ describe('buildNoticeColumnValues', () => {
 describe('noticeItemName', () => {
   it('combines unit name and tenant name', () => {
     expect(noticeItemName(VALID)).toBe('21 Newcombe Dr - 106 - Test Tenant')
+  })
+})
+
+describe('roommate notice mapping', () => {
+  it('names the item as address and unit only', () => {
+    expect(roommateNoticeItemName('21 Newcombe Dr - 106')).toBe('21 Newcombe Dr - 106')
+  })
+
+  it('maps name, email, phone, and move-out date onto Notices columns', () => {
+    const cv = buildRoommateNoticeColumnValues({
+      unitId: '11476729877',
+      unitName: '21 Newcombe Dr - 106',
+      moveOutDate: '2026-09-01',
+      fullName: 'Sam Leave',
+      email: 'sam@example.com',
+      phone: '506-555-1000',
+      stayingNames: 'Alex Stay',
+      leavingNames: 'Sam Leave',
+    })
+    expect(cv.text0).toBe('Sam Leave')
+    expect(cv.text2).toBe('sam@example.com')
+    expect(cv.date).toEqual({ date: '2026-09-01' })
+    expect(cv.long_text.text).toContain('506-555-1000')
+    expect(cv.color_mm66empx).toEqual({ label: NOTICES_TYPE_ROOMMATE_CHANGE })
+    expect(cv.dropdown__1).toEqual({ labels: ['Separation/Roommate Issues'] })
+    expect(cv.dropdown_mm544ttk).toEqual({ labels: ['No - My roommate wishes to keep the apartment'] })
+    expect(cv.text5).toBe('21 Newcombe Dr')
+    expect(cv.text00).toBe('106')
+    expect(cv.board_relation_mm1jz4k6).toEqual({ item_ids: [11476729877] })
+    expect(cv.text_mm542y9p).toContain('Alex Stay')
   })
 })

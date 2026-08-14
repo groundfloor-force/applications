@@ -11,12 +11,17 @@ const VALID_LOCALES: Locale[] = ['en', 'fr']
 
 export default async function RoommateLocalizedPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>
+  searchParams: Promise<{ autofill?: string }>
 }) {
   const { locale: rawLocale } = await params
   if (!VALID_LOCALES.includes(rawLocale as Locale)) notFound()
   const locale = rawLocale as Locale
+  const sp = await searchParams
+  const autofill = sp.autofill === '1'
+  const autofillQuery = autofill ? '?autofill=1' : ''
 
   const config = await getConfig()
   const t = getDictionary(locale)
@@ -31,7 +36,7 @@ export default async function RoommateLocalizedPage({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={config.logoUrl} alt={config.companyName} className="h-9 sm:h-12 object-contain" />
             <Link
-              href={`/apply/roommate/${otherLocale}`}
+              href={`/apply/roommate/${otherLocale}${autofillQuery}`}
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-brand-gray hover:text-primary-500 hover:bg-primary-50 border border-brand-border hover:border-primary-300 transition-colors flex-shrink-0"
               title={`Switch to ${otherLabel}`}
             >
@@ -44,7 +49,7 @@ export default async function RoommateLocalizedPage({
         </header>
 
         <main className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
-          <RoommateChangeForm />
+          <RoommateChangeForm autofill={autofill} />
         </main>
 
         <footer className="mt-16 border-t border-brand-border bg-white py-8 text-center text-sm text-brand-gray">

@@ -3,8 +3,14 @@ import { getConfig } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 
-export default async function RoommateLanguagePicker() {
+export default async function RoommateLanguagePicker({
+  searchParams,
+}: {
+  searchParams: Promise<{ autofill?: string }>
+}) {
   const config = await getConfig()
+  const params = await searchParams
+  const autofillQuery = params.autofill === '1' ? '?autofill=1' : ''
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col">
@@ -29,7 +35,7 @@ export default async function RoommateLanguagePicker() {
 
           <div className="grid grid-cols-1 gap-3">
             <Link
-              href="/apply/roommate/en"
+              href={`/apply/roommate/en${autofillQuery}`}
               className="group flex items-center gap-4 p-5 bg-white border border-brand-border hover:border-primary-500 hover:bg-primary-50 transition-all"
             >
               <div className="flex-shrink-0 w-12 h-12 bg-primary-50 group-hover:bg-primary-100 flex items-center justify-center text-2xl transition-colors">
@@ -49,7 +55,7 @@ export default async function RoommateLanguagePicker() {
             </Link>
 
             <Link
-              href="/apply/roommate/fr"
+              href={`/apply/roommate/fr${autofillQuery}`}
               className="group flex items-center gap-4 p-5 bg-white border border-brand-border hover:border-primary-500 hover:bg-primary-50 transition-all"
             >
               <div className="flex-shrink-0 w-12 h-12 bg-primary-50 group-hover:bg-primary-100 flex items-center justify-center text-2xl transition-colors">

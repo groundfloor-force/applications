@@ -369,6 +369,17 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
               Test Application
             </a>
             <a
+              href="/apply/roommate/en?autofill=1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-pill text-sm font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors border border-amber-200"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              Test Roommate Change
+            </a>
+            <a
               href="/apply"
               target="_blank"
               rel="noopener noreferrer"

@@ -35,6 +35,10 @@ function validData(overrides: Partial<RoommateChangeData> = {}): RoommateChangeD
     hasIncoming: false,
     incoming: [],
     feeAgreed: true,
+    effectiveDate: '2026-09-01',
+    noticeAcknowledged: true,
+    signatureData: 'data:image/png;base64,iVBORw0KGgo=',
+    signedAt: '2026-08-14T12:00:00.000Z',
     ...overrides,
   }
 }
@@ -120,6 +124,20 @@ describe('validateRoommateStep', () => {
     const e = validateRoommateStep(6, validData({ feeAgreed: false }), DEFAULT_RM_VALIDATION)
     expect(e.feeAgreed).toBe(DEFAULT_RM_VALIDATION.feeRequired)
   })
+
+  it('requires an effective date and notice acknowledgement on step 3', () => {
+    const missingDate = validateRoommateStep(3, validData({ effectiveDate: '' }), DEFAULT_RM_VALIDATION)
+    expect(missingDate.effectiveDate).toBe(DEFAULT_RM_VALIDATION.effectiveDateRequired)
+    const badDate = validateRoommateStep(3, validData({ effectiveDate: '31-08-2026' }), DEFAULT_RM_VALIDATION)
+    expect(badDate.effectiveDate).toBe(DEFAULT_RM_VALIDATION.effectiveDateInvalid)
+    const missingAck = validateRoommateStep(3, validData({ noticeAcknowledged: false }), DEFAULT_RM_VALIDATION)
+    expect(missingAck.noticeAcknowledged).toBe(DEFAULT_RM_VALIDATION.noticeAckRequired)
+  })
+
+  it('requires a signature before submit', () => {
+    const e = validateRoommateStep(7, validData({ signatureData: '' }), DEFAULT_RM_VALIDATION)
+    expect(e.signatureData).toBe(DEFAULT_RM_VALIDATION.signatureRequired)
+  })
 })
 
 describe('roommate helpers', () => {
@@ -152,6 +170,7 @@ describe('generateRoommateChangePdf', () => {
     expect(text).toContain('Alex Stay')
     expect(text).toContain('Sam Leave')
     expect(text).toContain('Taylor New')
-    expect(text).toContain('deposit@groundfloorpm.com')
+    expect(text).toContain('rent@groundfloorpm.com')
+    expect(text).toContain('2026-09-01')
   })
 })

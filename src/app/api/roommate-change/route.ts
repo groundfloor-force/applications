@@ -3,6 +3,8 @@ import {
   APPLICATIONS_BOARD_URL_PREFIX,
   createRoommateChange,
   createRoommateChangeUpdate,
+  createRoommateNoticeItems,
+  NOTICES_SIGNATURE_COLUMN_ID,
   uploadFileToMonday,
 } from '@/lib/monday'
 import { sendRoommateChangeNotificationEmail } from '@/lib/email'
@@ -65,6 +67,49 @@ export async function POST(req: NextRequest) {
     await uploadFileToMonday(itemId, pdfBuffer, pdfFileName(data), 'application/pdf')
     log('pdf_uploaded')
 
+    if (data.signatureData?.startsWith('data:image/')) {
+      stage = 'monday_upload_signature'
+      const match = data.signatureData.match(/^data:(image\/\w+);base64,(.+)$/)
+      if (match) {
+        const ext = match[1].split('/')[1] === 'jpeg' ? 'jpg' : match[1].split('/')[1]
+        await uploadFileToMonday(
+          itemId,
+          Buffer.from(match[2], 'base64'),
+          `signature.${ext}`,
+          match[1],
+        ).catch((err) => {
+          console.error(`[roommate-change ${requestId}] signature_upload_failed`, err)
+        })
+      }
+    }
+
+    stage = 'monday_notice_items'
+    const noticeIds = await createRoommateNoticeItems(data).catch((err) => {
+      console.error(`[roommate-change ${requestId}] notices_failed`, err)
+      return [] as string[]
+    })
+    log('notices_created', { count: noticeIds.length, noticeIds })
+
+    if (noticeIds.length > 0 && data.signatureData?.startsWith('data:image/')) {
+      stage = 'monday_notice_signatures'
+      const match = data.signatureData.match(/^data:(image\/\w+);base64,(.+)$/)
+      if (match) {
+        const ext = match[1].split('/')[1] === 'jpeg' ? 'jpg' : match[1].split('/')[1]
+        const sigBuf = Buffer.from(match[2], 'base64')
+        for (const noticeId of noticeIds) {
+          await uploadFileToMonday(
+            noticeId,
+            sigBuf,
+            `signature.${ext}`,
+            match[1],
+            NOTICES_SIGNATURE_COLUMN_ID,
+          ).catch((err) => {
+            console.error(`[roommate-change ${requestId}] notice_signature_failed`, { noticeId, err })
+          })
+        }
+      }
+    }
+
     stage = 'notify_emails'
     const config = await getConfig().catch(() => null)
     if (config?.notificationEmail) {
@@ -75,6 +120,7 @@ export async function POST(req: NextRequest) {
         staying(data).map(personName).join(', '),
         leaving(data).map(personName).join(', '),
         incomingPeople(data).map(personName).join(', ') || 'None',
+        data.effectiveDate,
       )
     }
     log('emails_sent')

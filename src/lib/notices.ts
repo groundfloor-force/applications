@@ -101,3 +101,53 @@ export function buildNoticeColumnValues(data: NoticeFormData): Record<string, an
 export function noticeItemName(data: NoticeFormData): string {
   return `${data.unitName.trim()} - ${data.fullName.trim()}`.slice(0, 250)
 }
+
+// Monday Notice Type label is misspelled on the board.
+export const NOTICES_TYPE_ROOMMATE_CHANGE = 'Roomate Change'
+
+export function roommateNoticeItemName(unitName: string): string {
+  return unitName.trim().slice(0, 250)
+}
+
+export function buildRoommateNoticeColumnValues(input: {
+  unitId: string
+  unitName: string
+  moveOutDate: string
+  fullName: string
+  email: string
+  phone: string
+  stayingNames: string
+  leavingNames: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+}): Record<string, any> {
+  const { address, unit } = parseUnitName(input.unitName)
+  const phoneLine = input.phone.trim() ? `Phone: ${input.phone.trim()}` : ''
+  const stayLeave = [
+    input.stayingNames && `Staying: ${input.stayingNames}`,
+    input.leavingNames && `Leaving: ${input.leavingNames}`,
+  ].filter(Boolean).join('\n')
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cv: Record<string, any> = {
+    date8: { date: new Date().toISOString().split('T')[0] },
+    status: { label: '*NEW' },
+    color_mm66empx: { label: NOTICES_TYPE_ROOMMATE_CHANGE },
+    type: { label: 'Move Out' },
+    date: { date: input.moveOutDate },
+    text0: input.fullName,
+    text2: input.email,
+    dropdown__1: { labels: ['Separation/Roommate Issues'] },
+    dropdown_mm544ttk: { labels: ['No - My roommate wishes to keep the apartment'] },
+    text5: address,
+    text00: unit,
+  }
+  if (input.unitId) {
+    cv.board_relation_mm1jz4k6 = { item_ids: [Number(input.unitId)] }
+  }
+  // Notices board has no phone column; put it on the Notice long-text so staff see it.
+  const noticeBits = [phoneLine, 'Submitted via Roommate Change form. Notice to vacate — not an approval until reviewed.']
+    .filter(Boolean)
+  cv.long_text = { text: noticeBits.join('\n') }
+  if (stayLeave) cv.text_mm542y9p = stayLeave
+  return cv
+}

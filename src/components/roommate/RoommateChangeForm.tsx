@@ -26,12 +26,50 @@ import RmStepReview from './RmStepReview'
 
 const TOTAL_STEPS = 7
 
-export default function RoommateChangeForm() {
+const TEST_ROOMMATE_DATA: RoommateChangeData = {
+  unitId: '11476929693',
+  unitName: '45 Fairview Knoll Drive - 3',
+  tenants: [
+    {
+      firstName: 'Jessica',
+      lastName: 'Tester',
+      email: 'jessica.tester@example.com',
+      phone: '506-555-1001',
+      status: 'staying',
+    },
+    {
+      firstName: 'Olivia',
+      lastName: 'Roommate',
+      email: 'olivia.roommate@example.com',
+      phone: '506-555-1003',
+      status: 'leaving',
+    },
+  ],
+  hasIncoming: true,
+  incoming: [
+    {
+      firstName: 'Daniel',
+      lastName: 'Tester',
+      email: 'daniel.tester@example.com',
+      phone: '506-555-1002',
+      status: '',
+    },
+  ],
+  effectiveDate: '2026-10-01',
+  noticeAcknowledged: true,
+  feeAgreed: true,
+  signatureData: '',
+  signedAt: '',
+}
+
+export default function RoommateChangeForm({ autofill }: { autofill?: boolean }) {
   const router = useRouter()
   const t = useT()
   const locale = useLocale()
   const [step, setStep] = useState(1)
-  const [data, setData] = useState<RoommateChangeData>(initialRoommateChangeData)
+  const [data, setData] = useState<RoommateChangeData>(
+    autofill ? TEST_ROOMMATE_DATA : initialRoommateChangeData,
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
@@ -39,23 +77,25 @@ export default function RoommateChangeForm() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    if (autofill) return
     const saved = loadRoommateForm()
     if (saved && saved.step > 1) {
       setSavedBanner({ step: saved.step, savedAt: saved.savedAt })
     }
-  }, [])
+  }, [autofill])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [step])
 
   useEffect(() => {
+    if (autofill) return
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => saveRoommateForm(step, data), 800)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
-  }, [data, step])
+  }, [data, step, autofill])
 
   const onChange = useCallback((updates: Partial<RoommateChangeData>) => {
     setData((prev) => ({ ...prev, ...updates }))
@@ -205,8 +245,9 @@ export default function RoommateChangeForm() {
           <RmStepReview
             data={data}
             submitting={submitting}
-            error={visibleErrors.submit}
+            errors={visibleErrors}
             onJump={handleJumpToStep}
+            onChange={onChange}
             onSubmit={handleSubmit}
           />
         )}
