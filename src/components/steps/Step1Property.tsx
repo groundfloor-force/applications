@@ -47,62 +47,66 @@ function UnitRow({
   ].filter(Boolean)
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left px-4 py-3 flex items-center gap-3 border transition-all ${
+    <div
+      className={`w-full flex items-stretch border transition-all ${
         selected
           ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200'
           : 'border-brand-border hover:border-primary-300 hover:bg-brand-bg'
       }`}
     >
-      <div
-        className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors ${
-          selected ? 'bg-primary-500 border-primary-500 text-white' : 'border-brand-border text-brand-gray'
-        }`}
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex-1 min-w-0 text-left px-4 py-3 flex items-center gap-3"
       >
-        {selected ? selectedRank : ''}
-      </div>
+        <div
+          className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors ${
+            selected ? 'bg-primary-500 border-primary-500 text-white' : 'border-brand-border text-brand-gray'
+          }`}
+        >
+          {selected ? selectedRank : ''}
+        </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-brand-dark text-sm" style={{ fontWeight: 600 }}>
-            {property.address
-              ? `${property.address}${property.unit ? `, Unit ${property.unit}` : ''}`
-              : property.unit
-                ? `Unit ${property.unit}`
-                : property.name}
-          </span>
-          {property.rent > 0 && (
-            <span className="text-primary-500 text-sm" style={{ fontWeight: 600 }}>
-              ${property.rent.toLocaleString()}{t.step1.perMonth}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-brand-dark text-sm" style={{ fontWeight: 600 }}>
+              {property.address
+                ? `${property.address}${property.unit ? `, Unit ${property.unit}` : ''}`
+                : property.unit
+                  ? `Unit ${property.unit}`
+                  : property.name}
             </span>
-          )}
-          {property.status === 'COMING UP' && (
-            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 font-medium">
-              {t.step1.comingUp}
-            </span>
+            {property.rent > 0 && (
+              <span className="text-primary-500 text-sm" style={{ fontWeight: 600 }}>
+                ${property.rent.toLocaleString()}{t.step1.perMonth}
+              </span>
+            )}
+            {property.status === 'COMING UP' && (
+              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 font-medium">
+                {t.step1.comingUp}
+              </span>
+            )}
+          </div>
+          {badges.length > 0 && (
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+              {badges.map((b) => (
+                <span key={b} className="text-xs text-brand-gray">
+                  {b}
+                </span>
+              ))}
+            </div>
           )}
         </div>
-        {badges.length > 0 && (
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-            {badges.map((b) => (
-              <span key={b} className="text-xs text-brand-gray">
-                {b}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      </button>
 
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); onDetails() }}
-        className="flex-shrink-0 text-xs text-primary-400 hover:text-primary-600 hover:underline ml-1"
+        onClick={onDetails}
+        className="flex-shrink-0 text-xs text-primary-400 hover:text-primary-600 hover:underline px-4 py-3"
       >
         {t.step1.details}
       </button>
-    </button>
+    </div>
   )
 }
 

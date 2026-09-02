@@ -56,9 +56,10 @@ async function mondayQuery<T = Record<string, unknown>>(
 // ── Vacancy Board ─────────────────────────────────────────────────────────────
 
 const AVAILABLE_STATUSES = ['VACANT', 'COMING UP']
+const EXCLUDED_AD_STATUSES = ['NOT LISTING - see notes', 'FOR SALE']
 
 const VACANCY_COLUMN_IDS = `[
-  "status",
+  "status", "status8",
   "text_mkrckabm", "text_mkrcc6j0", "text_mkrcjxvm",
   "text_mkrcw3g6", "numeric_mm2z81x6", "dropdown_mm2znqk1",
   "dropdown_mm2zwhb", "link", "dropdown_mm2zjvrj",
@@ -74,27 +75,30 @@ type RawVacancyItem = {
 
 type VacancyPage = { cursor: string | null; items: RawVacancyItem[] }
 
-// The vacancy board has more than 500 items, so a single items_page call
-// silently drops newer listings (e.g. 250 Mill Road). Walk the cursor.
+// Filter in the Monday query so we never page through occupied/other
+// statuses. items_page_by_column_values matches status by the label
+// shown in the UI (VACANT / COMING UP). Walk the cursor in case the
+// filtered set still exceeds one page.
 export async function getVacancies(): Promise<Property[]> {
-  const firstQuery = `
-    query {
-      boards(ids: [${VACANCY_BOARD_ID}]) {
-        items_page(limit: 500) {
-          cursor
-          items {
-            id
-            name
-            column_values(ids: ${VACANCY_COLUMN_IDS}) { id text value }
-          }
+  const first = await mondayQuery<{ items_page_by_column_values: VacancyPage }>(
+    `query ($boardId: ID!, $columns: [ItemsPageByColumnValuesQuery!]) {
+      items_page_by_column_values(board_id: $boardId, columns: $columns, limit: 500) {
+        cursor
+        items {
+          id
+          name
+          column_values(ids: ${VACANCY_COLUMN_IDS}) { id text value }
         }
       }
-    }
-  `
+    }`,
+    {
+      boardId: String(VACANCY_BOARD_ID),
+      columns: [{ column_id: 'status', column_values: AVAILABLE_STATUSES }],
+    },
+  )
 
-  const first = await mondayQuery<{ boards: { items_page: VacancyPage }[] }>(firstQuery)
-  const items: RawVacancyItem[] = [...(first.boards[0]?.items_page?.items ?? [])]
-  let cursor = first.boards[0]?.items_page?.cursor ?? null
+  const items: RawVacancyItem[] = [...(first.items_page_by_column_values?.items ?? [])]
+  let cursor = first.items_page_by_column_values?.cursor ?? null
 
   while (cursor) {
     const next = await mondayQuery<{ next_items_page: VacancyPage }>(
@@ -114,7 +118,12 @@ export async function getVacancies(): Promise<Property[]> {
     cursor = next.next_items_page?.cursor ?? null
   }
 
+  // status8 / #BLDG exclusions are post-query: items_page_by_column_values is include-only.
   return items
+    .filter((item) => {
+      const ad = item.column_values.find((c) => c.id === 'status8')?.text ?? ''
+      return !EXCLUDED_AD_STATUSES.includes(ad) && !item.name.trim().endsWith(' #BLDG')
+    })
     .map((item) => {
       const col = (id: string) => item.column_values.find((c) => c.id === id)
       const t = (id: string) => col(id)?.text ?? ''
@@ -330,10 +339,9 @@ export async function createApplication(
     ...(locale && { dropdown_mm3bp54f: { labels: [locale] } }),
   }
 
-  // Additional occupants count
+  // Additional occupants count (status labels: "0" | "1" | "2" | "3")
   const extra = occupants.length
-  const occLabel = extra === 0 ? '0' : extra === 1 ? '1' : '2'
-  cv.status = { label: occLabel }
+  cv.status = { label: String(Math.min(extra, 3)) }
 
   // Occupant 2 (1st additional)
   if (occupants[0]) {
@@ -351,9 +359,22 @@ export async function createApplication(
     cv.occ__1_phone__ = occupants[1].phone
   }
 
-  // Link to vacancy board item
-  if (property?.id) {
-    cv.board_relation_mm0pnwbx = { item_ids: [parseInt(property.id)] }
+  // Occupant 4 (3rd additional)
+  if (occupants[2]) {
+    cv.text_mm6tg6s = occupants[2].firstName
+    cv.text_mm6th75b = occupants[2].lastName
+    cv.text_mm6tebt3 = occupants[2].email
+    cv.text_mm6t74h1 = occupants[2].phone
+  }
+
+  // Vacancy List connect-boards column. Prefer the full selection so
+  // multi-property apps link every chosen unit; fall back to primary.
+  const vacancyItemIds = (properties.length > 0 ? properties : property ? [property] : [])
+    .map((p) => Number(p.id))
+    .filter((id) => Number.isFinite(id) && id > 0)
+
+  if (vacancyItemIds.length > 0) {
+    cv.board_relation_mm0pnwbx = { item_ids: vacancyItemIds }
   }
 
   const mutation = `
@@ -374,7 +395,30 @@ export async function createApplication(
     columnValues: JSON.stringify(cv),
   })
 
-  return result.create_item.id
+  const itemId = result.create_item.id
+
+  // create_item often silently drops board_relation values; set the
+  // Vacancy List link in a follow-up mutation the way support/maintenance do.
+  if (vacancyItemIds.length > 0) {
+    await mondayQuery(
+      `mutation ($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
+        change_multiple_column_values(
+          board_id: $boardId
+          item_id: $itemId
+          column_values: $columnValues
+        ) { id }
+      }`,
+      {
+        boardId: String(APPLICATIONS_BOARD_ID),
+        itemId: String(itemId),
+        columnValues: JSON.stringify({
+          board_relation_mm0pnwbx: { item_ids: vacancyItemIds },
+        }),
+      },
+    )
+  }
+
+  return itemId
 }
 
 export async function createRoommateChange(
