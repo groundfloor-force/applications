@@ -2,6 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildFullDetails,
   buildIntakePayload,
+  commentIdFor,
+  fileIdFor,
+  htmlToPlainText,
+  isAllowedLighthouseFile,
+  postApplicationComment,
+  postApplicationFile,
   postApplicationIntake,
   type IntakeFormData,
 } from '@/lib/lighthouse-intake'
@@ -204,6 +210,233 @@ describe('postApplicationIntake', () => {
     await expect(
       postApplicationIntake(buildIntakePayload(sampleData(), crypto.randomUUID(), 'en')),
     ).rejects.toThrow(/Lighthouse intake failed \(500\)/)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+
+describe('commentIdFor / htmlToPlainText', () => {
+  it('returns a stable UUID for the same applicationId + kind', () => {
+    const a = commentIdFor('550e8400-e29b-41d4-a716-446655440000', 'full-details')
+    const b = commentIdFor('550e8400-e29b-41d4-a716-446655440000', 'full-details')
+    const c = commentIdFor('550e8400-e29b-41d4-a716-446655440000', 'preferred-language')
+    expect(a).toBe(b)
+    expect(a).not.toBe(c)
+    expect(a).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    )
+  })
+
+  it('strips HTML and truncates long bodies', () => {
+    const plain = htmlToPlainText('<p><b>Hello</b></p><br/>World &amp; co')
+    expect(plain).toContain('Hello')
+    expect(plain).toContain('World & co')
+    expect(plain).not.toContain('<')
+    const long = htmlToPlainText('<p>' + 'x'.repeat(12_000) + '</p>')
+    expect(long.length).toBeLessThanOrEqual(10_000)
+    expect(long).toContain('…[truncated]')
+  })
+})
+
+describe('postApplicationComment', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('returns null when env is not configured', async () => {
+    vi.stubEnv('APPLICATIONS_INTAKE_SECRET', '')
+    vi.stubEnv('APPLICATIONS_INTAKE_URL', '')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await postApplicationComment({
+      applicationId: crypto.randomUUID(),
+      body: 'hello',
+    })
+    expect(result).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('posts to /api/comments with Bearer auth and entityType application', async () => {
+    vi.stubEnv('APPLICATIONS_INTAKE_SECRET', 'test-secret')
+    vi.stubEnv('APPLICATIONS_INTAKE_URL', 'https://example.test/api/applications/intake')
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          entityType: 'application',
+          entityId: '123',
+          applicationId: '550e8400-e29b-41d4-a716-446655440000',
+          lighthouseId: 123,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000'
+    const result = await postApplicationComment({
+      applicationId,
+      lighthouseId: 123,
+      body: 'Applicant called to confirm the move-in date.',
+      commentId: commentIdFor(applicationId, 'test'),
+    })
+
+    expect(result?.id).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(result?.lighthouseId).toBe(123)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('https://example.test/api/comments')
+    expect(init.headers.Authorization).toBe('Bearer test-secret')
+    const body = JSON.parse(init.body)
+    expect(body.entityType).toBe('application')
+    expect(body.applicationId).toBe(applicationId)
+    expect(body.id).toBe(123)
+    expect(body.commentId).toBe(commentIdFor(applicationId, 'test'))
+  })
+
+  it('retries once on 429 then succeeds', async () => {
+    vi.stubEnv('APPLICATIONS_INTAKE_SECRET', 'test-secret')
+    vi.stubEnv('APPLICATIONS_INTAKE_URL', 'https://example.test/api/applications/intake')
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'Too many requests' }), {
+          status: 429,
+          headers: { 'Retry-After': '0' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+            entityType: 'application',
+            entityId: '1',
+            duplicate: false,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await postApplicationComment({
+      applicationId: crypto.randomUUID(),
+      body: 'retry me',
+    })
+    expect(result?.id).toBe('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('fileIdFor / isAllowedLighthouseFile', () => {
+  it('returns a stable UUID per applicationId + kind', () => {
+    const a = fileIdFor('550e8400-e29b-41d4-a716-446655440000', 'application-pdf')
+    const b = fileIdFor('550e8400-e29b-41d4-a716-446655440000', 'application-pdf')
+    const c = fileIdFor('550e8400-e29b-41d4-a716-446655440000', 'doc:paystub')
+    expect(a).toBe(b)
+    expect(a).not.toBe(c)
+    expect(a).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    )
+  })
+
+  it('accepts allowed types under 15MB and rejects others', () => {
+    expect(isAllowedLighthouseFile('paystub.pdf', 100).ok).toBe(true)
+    expect(isAllowedLighthouseFile('photo.HEIC', 100).ok).toBe(true)
+    expect(isAllowedLighthouseFile('notes.txt', 100).ok).toBe(false)
+    expect(isAllowedLighthouseFile('big.pdf', 16 * 1024 * 1024).ok).toBe(false)
+    expect(isAllowedLighthouseFile('empty.pdf', 0).ok).toBe(false)
+  })
+})
+
+describe('postApplicationFile', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('returns null when env is not configured', async () => {
+    vi.stubEnv('APPLICATIONS_INTAKE_SECRET', '')
+    vi.stubEnv('APPLICATIONS_INTAKE_URL', '')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await postApplicationFile({
+      applicationId: crypto.randomUUID(),
+      buffer: Buffer.from('%PDF-1.4'),
+      fileName: 'app.pdf',
+      mimeType: 'application/pdf',
+    })
+    expect(result).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('posts multipart to /api/files with Bearer auth', async () => {
+    vi.stubEnv('APPLICATIONS_INTAKE_SECRET', 'test-secret')
+    vi.stubEnv('APPLICATIONS_INTAKE_URL', 'https://example.test/api/applications/intake')
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 456,
+          entityType: 'application',
+          entityId: '123',
+          applicationId: '550e8400-e29b-41d4-a716-446655440000',
+          lighthouseId: 123,
+          fileName: 'paystub.pdf',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000'
+    const result = await postApplicationFile({
+      applicationId,
+      lighthouseId: 123,
+      buffer: Buffer.from('%PDF-1.4 test'),
+      fileName: 'paystub.pdf',
+      mimeType: 'application/pdf',
+      fileId: fileIdFor(applicationId, 'paystub'),
+    })
+
+    expect(result?.id).toBe(456)
+    expect(result?.fileName).toBe('paystub.pdf')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('https://example.test/api/files')
+    expect(init.headers.Authorization).toBe('Bearer test-secret')
+    expect(init.headers['Content-Type']).toBeUndefined()
+    expect(init.body).toBeInstanceOf(FormData)
+    const form = init.body as FormData
+    expect(form.get('entityType')).toBe('application')
+    expect(form.get('applicationId')).toBe(applicationId)
+    expect(form.get('id')).toBe('123')
+    expect(form.get('fileId')).toBe(fileIdFor(applicationId, 'paystub'))
+    expect(form.get('file')).toBeTruthy()
+  })
+
+  it('retries once on 500 then throws if still failing', async () => {
+    vi.stubEnv('APPLICATIONS_INTAKE_SECRET', 'test-secret')
+    vi.stubEnv('APPLICATIONS_INTAKE_URL', 'https://example.test/api/applications/intake')
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'Storage failed' }), { status: 500 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      postApplicationFile({
+        applicationId: crypto.randomUUID(),
+        buffer: Buffer.from('%PDF'),
+        fileName: 'x.pdf',
+      }),
+    ).rejects.toThrow(/Lighthouse file upload failed \(500\)/)
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

@@ -5,7 +5,17 @@ import { sendConfirmationEmail, sendNotificationEmail, sendFailureNotificationEm
 import { getConfig } from '@/lib/config'
 import { generateApplicationPdf } from '@/lib/pdf'
 import { runIncomeVerification, formatVerificationUpdate, type VerificationInput } from '@/lib/income-verification'
-import { buildIntakePayload, postApplicationIntake } from '@/lib/lighthouse-intake'
+import {
+  buildFullDetails,
+  buildIntakePayload,
+  commentIdFor,
+  fileIdFor,
+  htmlToPlainText,
+  isAllowedLighthouseFile,
+  postApplicationComment,
+  postApplicationFile,
+  postApplicationIntake,
+} from '@/lib/lighthouse-intake'
 import type { FormData } from '@/lib/types'
 
 export const maxDuration = 300
@@ -216,6 +226,81 @@ export async function POST(req: NextRequest) {
           applicationId: lh.applicationId,
           portalUrl: lh.portalUrl ?? null,
         })
+
+        // Mirror Monday updates into Lighthouse Updates (comments). Best-effort.
+        const langLabel = locale === 'fr' ? 'Français (FR)' : 'English (EN)'
+        try {
+          const c1 = await postApplicationComment({
+            applicationId: token,
+            lighthouseId: lh.id,
+            body: `Preferred language: ${langLabel}`,
+            commentId: commentIdFor(token, 'preferred-language'),
+          })
+          log('lighthouse_comment_ok', { kind: 'preferred-language', commentId: c1?.id, duplicate: c1?.duplicate ?? false })
+        } catch (cErr) {
+          const msg = cErr instanceof Error ? cErr.message : String(cErr)
+          console.error(`[submit ${requestId}] lighthouse_comment_failed kind=preferred-language error="${msg}"`)
+          log('lighthouse_comment_failed', { kind: 'preferred-language', error: msg })
+        }
+
+        try {
+          const c2 = await postApplicationComment({
+            applicationId: token,
+            lighthouseId: lh.id,
+            body: buildFullDetails(data),
+            commentId: commentIdFor(token, 'full-details'),
+          })
+          log('lighthouse_comment_ok', { kind: 'full-details', commentId: c2?.id, duplicate: c2?.duplicate ?? false })
+        } catch (cErr) {
+          const msg = cErr instanceof Error ? cErr.message : String(cErr)
+          console.error(`[submit ${requestId}] lighthouse_comment_failed kind=full-details error="${msg}"`)
+          log('lighthouse_comment_failed', { kind: 'full-details', error: msg })
+        }
+
+        // Mirror Monday files into Lighthouse Files. One request per file; best-effort.
+        const lhFiles: { buffer: Buffer; fileName: string; mimeType: string; kind: string }[] = [
+          { buffer: pdfBuffer, fileName: pdfName, mimeType: 'application/pdf', kind: 'application-pdf' },
+          ...fileBuffers.map(({ buffer, name, type, label }) => ({
+            buffer,
+            fileName: `${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_'),
+            mimeType: type,
+            kind: `doc:${label}_${name}`.replace(/[^a-zA-Z0-9._-]/g, '_'),
+          })),
+        ]
+
+        let lhUploaded = 0
+        let lhSkipped = 0
+        for (const f of lhFiles) {
+          const allowed = isAllowedLighthouseFile(f.fileName, f.buffer.length)
+          if (!allowed.ok) {
+            lhSkipped++
+            log('lighthouse_file_skipped', { fileName: f.fileName, reason: allowed.reason })
+            continue
+          }
+          try {
+            const up = await postApplicationFile({
+              applicationId: token,
+              lighthouseId: lh.id,
+              buffer: f.buffer,
+              fileName: f.fileName,
+              mimeType: f.mimeType,
+              fileId: fileIdFor(token, f.kind),
+            })
+            lhUploaded++
+            log('lighthouse_file_ok', {
+              fileName: f.fileName,
+              fileId: up?.id,
+              duplicate: up?.duplicate ?? false,
+            })
+          } catch (fErr) {
+            const msg = fErr instanceof Error ? fErr.message : String(fErr)
+            console.error(
+              `[submit ${requestId}] lighthouse_file_failed fileName=${f.fileName} error="${msg}"`,
+            )
+            log('lighthouse_file_failed', { fileName: f.fileName, error: msg })
+          }
+        }
+        log('lighthouse_files_done', { uploaded: lhUploaded, skipped: lhSkipped, total: lhFiles.length })
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -268,6 +353,24 @@ export async function POST(req: NextRequest) {
             `[submit ${requestId}] lighthouse_income_upsert_failed error="${msg}"`,
           )
         }
+
+        // Mirror income-verification Monday update into Lighthouse comments.
+        try {
+          const c = await postApplicationComment({
+            applicationId: token,
+            lighthouseId,
+            body: htmlToPlainText(html),
+            commentId: commentIdFor(token, 'income-verification'),
+          })
+          console.log(
+            `[submit ${requestId}] lighthouse_comment_ok kind=income-verification commentId=${c?.id ?? 'null'} duplicate=${c?.duplicate ?? false}`,
+          )
+        } catch (cErr) {
+          const msg = cErr instanceof Error ? cErr.message : String(cErr)
+          console.error(
+            `[submit ${requestId}] lighthouse_comment_failed kind=income-verification error="${msg}"`,
+          )
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error'
         console.error(`[submit ${requestId}] income_verification_failed error="${msg}"`)
@@ -275,6 +378,20 @@ export async function POST(req: NextRequest) {
           itemId,
           `<p><b>📋 Income verification failed</b></p><p><i>${msg}</i></p>`,
         ).catch(() => null)
+
+        try {
+          await postApplicationComment({
+            applicationId: token,
+            lighthouseId,
+            body: `Income verification failed\n${msg}`,
+            commentId: commentIdFor(token, 'income-verification-failed'),
+          })
+        } catch (cErr) {
+          const cMsg = cErr instanceof Error ? cErr.message : String(cErr)
+          console.error(
+            `[submit ${requestId}] lighthouse_comment_failed kind=income-verification-failed error="${cMsg}"`,
+          )
+        }
       }
     })
 
