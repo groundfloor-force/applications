@@ -5,6 +5,7 @@ import { sendConfirmationEmail, sendNotificationEmail, sendFailureNotificationEm
 import { getConfig } from '@/lib/config'
 import { generateApplicationPdf } from '@/lib/pdf'
 import { runIncomeVerification, formatVerificationUpdate, type VerificationInput } from '@/lib/income-verification'
+import { buildIntakePayload, postApplicationIntake } from '@/lib/lighthouse-intake'
 import type { FormData } from '@/lib/types'
 
 export const maxDuration = 300
@@ -199,6 +200,29 @@ export async function POST(req: NextRequest) {
     ])
     log('emails_sent')
 
+    // Dual-write to Lighthouse. Never fail the Monday path if this errors.
+    stage = 'lighthouse_intake'
+    let lighthouseId: number | undefined
+    let lighthousePortalUrl: string | undefined
+    try {
+      const lh = await postApplicationIntake(buildIntakePayload(data, token, locale))
+      if (!lh) {
+        log('lighthouse_intake_skipped', { reason: 'not_configured' })
+      } else {
+        lighthouseId = lh.id
+        lighthousePortalUrl = lh.portalUrl
+        log('lighthouse_intake_ok', {
+          lighthouseId: lh.id,
+          applicationId: lh.applicationId,
+          portalUrl: lh.portalUrl ?? null,
+        })
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[submit ${requestId}] lighthouse_intake_failed error="${msg}"`)
+      log('lighthouse_intake_failed', { error: msg })
+    }
+
     stage = 'schedule_income_verification'
     const monthlyRent = parseMoney(data.monthlyRent) ?? 0
     const verificationInput: VerificationInput = {
@@ -227,6 +251,23 @@ export async function POST(req: NextRequest) {
         const html = formatVerificationUpdate(result)
         await postPlainUpdate(itemId, html)
         console.log(`[submit ${requestId}] income_verification_ok`)
+
+        // Best-effort upsert: same applicationId, attach verification JSON.
+        try {
+          const lh = await postApplicationIntake(
+            buildIntakePayload(data, token, locale, result),
+          )
+          if (lh) {
+            console.log(
+              `[submit ${requestId}] lighthouse_income_upsert_ok lighthouseId=${lh.id}`,
+            )
+          }
+        } catch (lhErr) {
+          const msg = lhErr instanceof Error ? lhErr.message : String(lhErr)
+          console.error(
+            `[submit ${requestId}] lighthouse_income_upsert_failed error="${msg}"`,
+          )
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error'
         console.error(`[submit ${requestId}] income_verification_failed error="${msg}"`)
@@ -238,8 +279,15 @@ export async function POST(req: NextRequest) {
     })
 
     stage = 'done'
-    log('success', { itemId, totalMs: Date.now() - startedAt })
-    return NextResponse.json({ success: true, itemId, token, requestId })
+    log('success', { itemId, lighthouseId: lighthouseId ?? null, totalMs: Date.now() - startedAt })
+    return NextResponse.json({
+      success: true,
+      itemId,
+      token,
+      requestId,
+      ...(lighthouseId != null && { lighthouseId }),
+      ...(lighthousePortalUrl && { lighthousePortalUrl }),
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     const stack = error instanceof Error ? error.stack : undefined
